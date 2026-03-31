@@ -1,7 +1,7 @@
 {
   "name": "loup-garou-mobile",
   "version": "1.0.0",
-  "description": "Jeu de Loup-Garou en présentiel avec synchronisation Bluetooth",
+  "description": "Jeu de Loup-Garou en présentiel avec synchronisation WiFi/Internet",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "loup-garou",
     "werewolf",
     "jeu",
-    "bluetooth",
+    "wifi",
+    "internet",
     "pwa",
     "mobile"
   ],
@@ -22,9 +23,12 @@
   "engines": {
     "node": ">=14.0.0"
   },
+  "dependencies": {
+    "ws": "^8.13.0"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/loup-garou.git"
+    "url": "https://github.com/aarmad/loup_garou.git"
   },
-  "homepage": "https://github.com/username/loup-garou#readme"
+  "homepage": "https://github.com/aarmad/loup_garou#readme"
 }

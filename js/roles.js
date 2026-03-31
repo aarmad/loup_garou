@@ -9,7 +9,7 @@ const ROLES = {
     voyante: {
         name: 'Voyante',
         emoji: '🔮',
-        image: 'assets/images/roles/voyante.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/b/be/Carte3.png/revision/latest/scale-to-width-down/185?cb=20210104171212&path-prefix=fr',
         team: 'village',
         description: 'Découvre le rôle d\'une personne chaque nuit.',
         instructions: [
@@ -27,7 +27,7 @@ const ROLES = {
     cupidon: {
         name: 'Cupidon',
         emoji: '💘',
-        image: 'assets/images/roles/cupidon.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/0/09/Carte7.png/revision/latest/scale-to-width-down/185?cb=20210104171708&path-prefix=fr',
         team: 'village',
         description: 'Lie deux joueurs ensemble la première nuit.',
         instructions: [
@@ -46,7 +46,7 @@ const ROLES = {
     chasseur: {
         name: 'Chasseur',
         emoji: '🔫',
-        image: 'assets/images/roles/chasseur.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/0/0e/Carte6.png/revision/latest/scale-to-width-down/185?cb=20210104171604&path-prefix=fr',
         team: 'village',
         description: 'Élimine quelqu\'un après sa mort.',
         instructions: [
@@ -63,7 +63,7 @@ const ROLES = {
     pettefille: {
         name: 'Petite Fille',
         emoji: '👧',
-        image: 'assets/images/roles/pettefille.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/4/4f/Carte12.png/revision/latest/scale-to-width-down/185?cb=20210104172327&path-prefix=fr',
         team: 'village',
         description: 'Voit la nuit comme le jour.',
         instructions: [
@@ -81,7 +81,7 @@ const ROLES = {
     loupgarou: {
         name: 'Loup-Garou',
         emoji: '🐺',
-        image: 'assets/images/roles/loupgarou.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/1/1e/Carte2.png/revision/latest/scale-to-width-down/185?cb=20210104171045&path-prefix=fr',
         team: 'wolves',
         description: 'Élimine un villageois chaque nuit.',
         instructions: [
@@ -100,7 +100,7 @@ const ROLES = {
     loupblanc: {
         name: 'Loup Blanc',
         emoji: '⚪🐺',
-        image: 'assets/images/roles/loupblanc.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/9/9f/Carte9.png/revision/latest/scale-to-width-down/185?cb=20240615184428&path-prefix=fr',
         team: 'solo',
         description: 'Loup solitaire qui peut éliminer un loup chaque nuit.',
         instructions: [
@@ -122,7 +122,7 @@ const ROLES = {
     sorciere: {
         name: 'Sorcière',
         emoji: '🧙‍♀️',
-        image: 'assets/images/roles/sorciere.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/5/53/Carte5.png/revision/latest/scale-to-width-down/185?cb=20210104171444&path-prefix=fr',
         team: 'village',
         description: 'A deux potions pour sauver et éliminer.',
         instructions: [
@@ -142,7 +142,7 @@ const ROLES = {
     salvateur: {
         name: 'Salvateur',
         emoji: '🛡️',
-        image: 'assets/images/roles/salvateur.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/3/37/Carte4.png/revision/latest/scale-to-width-down/185?cb=20240615180235&path-prefix=fr',
         team: 'village',
         description: 'Protège quelqu\'un chaque nuit.',
         instructions: [
@@ -160,7 +160,7 @@ const ROLES = {
     idiot: {
         name: 'Idiot',
         emoji: '🤡',
-        image: 'assets/images/roles/idiot.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/6/63/Carte13.png/revision/latest/scale-to-width-down/185?cb=20240615170937&path-prefix=fr',
         team: 'village',
         description: 'Si éliminé le jour, il ne meurt pas mais perd ses pouvoirs.',
         instructions: [
@@ -174,45 +174,45 @@ const ROLES = {
         winCondition: 'wolves'
     },
 
-    tancheancre: {
-        name: 'Tanneur Ancré',
-        emoji: '⚙️',
-        image: 'assets/images/roles/tancheancre.svg',
+    pyromane: {
+        name: 'Pyromane',
+        emoji: '🔥',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/e/e4/Pyromane1.webp/revision/latest/scale-to-width-down/180?cb=20250907104701&path-prefix=fr',
         team: 'village',
-        description: 'Ancre un autre joueur - ils votent ensemble.',
+        description: 'Asperge deux personnes d\'essence la nuit - elles brûlent si elle meurt.',
         instructions: [
-            'Vous êtes le Tanneur Ancré.',
-            'Vous êtes lié à une autre personne choisie avant le jeu.',
-            'Vous votez toujours ensemble pour les éliminations.',
-            'Si l\'un meurt, l\'autre meurt aussi!'
+            'Vous êtes le Pyromane.',
+            'Chaque nuit, vous aspergez d\'essence deux personnes.',
+            'Si vous mourez la nuit, ces deux personnes brûlent et meurent aussi.',
+            'Jouez stratégiquement avec vos aspersions!'
         ],
-        hasNightAction: false,
-        linkedRole: true,
+        hasNightAction: true,
+        nightActionType: 'douse',
+        nightActionTarget: 'twoPlayers',
         winCondition: 'wolves'
     },
 
-    gendarme: {
-        name: 'Gendarme',
-        emoji: '🚔',
-        image: 'assets/images/roles/gendarme.svg',
+    ancien: {
+        name: 'Ancien',
+        emoji: '👴',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/e/e9/Ancien.webp/revision/latest/scale-to-width-down/180?cb=20250907101920&path-prefix=fr',
         team: 'village',
-        description: 'Peut arrêter l\'action d\'une personne la nuit.',
+        description: 'Bénéficie d\'une protection la première nuit.',
         instructions: [
-            'Vous êtes le Gendarme.',
-            'Chaque nuit, vous pouvez interdire une personne d\'agir.',
-            'Cette personne ne pourra pas utiliser son pouvoir cette nuit.',
-            'Cible intelligemment pour bloquer les loups!'
+            'Vous êtes l\'Ancien du village.',
+            'La première nuit, vous êtes protégé des loups.',
+            'Si l\'on découvre votre identité, vous devenez une cible prioritaire.',
+            'Gardez votre secret pour rester en vie!'
         ],
-        hasNightAction: true,
-        nightActionType: 'block',
-        nightActionTarget: 'singlePlayer',
+        hasNightAction: false,
+        protectedFirstNight: true,
         winCondition: 'wolves'
     },
 
     renard: {
         name: 'Renard',
         emoji: '🦊',
-        image: 'assets/images/roles/renard.svg',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/7/7c/Renard.webp/revision/latest/scale-to-width-down/180?cb=20250907110946&path-prefix=fr',
         team: 'village',
         description: 'Détecte les loups alentour.',
         instructions: [
@@ -238,9 +238,9 @@ const ROLE_DISTRIBUTIONS = {
     5: ['loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
     6: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
     7: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon'],
-    8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'chasseur'],
-    9: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'chasseur'],
-    10: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'chasseur', 'renard'],
+    8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'pyromane'],
+    9: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'ancien'],
+    10: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'pyromane', 'renard'],
 };
 
 /**

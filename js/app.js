@@ -10,7 +10,7 @@ const AppState = {
     myId: null,
     isPresenter: false,
     gameController: null,
-    bluetoothManager: null,
+    networkManager: null,
     syncManager: null,
     connectedPlayers: [],
     selectedRoles: [],
@@ -25,14 +25,14 @@ function initializeApp() {
 
     // Créer les instances
     AppState.gameController = new GameController();
-    AppState.bluetoothManager = new BluetoothManager();
-    AppState.syncManager = new SyncManager(AppState.bluetoothManager, AppState.gameController);
+    AppState.networkManager = new NetworkManager();
+    AppState.syncManager = new SyncManager(AppState.networkManager, AppState.gameController);
 
     // Attacher les listeners d'événements
     attachEventListeners();
 
-    // Vérifier la disponibilité Bluetooth
-    updateBluetoothStatus();
+    // Vérifier la disponibilité réseau
+    updateNetworkStatus();
 
     // Charger les paramètres sauvegardés
     loadSavedSettings();
@@ -41,24 +41,17 @@ function initializeApp() {
 }
 
 /**
- * Mettre à jour le statut Bluetooth
+ * Mettre à jour le statut réseau
  */
-function updateBluetoothStatus() {
+function updateNetworkStatus() {
     const statusElement = document.getElementById('bluetoothStatus');
     const createBtn = document.getElementById('createGameBtn');
     const joinBtn = document.getElementById('joinGameBtn');
 
-    if (AppState.bluetoothManager.isAvailable || AppState.bluetoothManager.simulationMode) {
-        statusElement.innerHTML = '<span class="status-icon">✓</span> <span>Bluetooth disponible</span>';
-        statusElement.classList.add('available');
-        createBtn.disabled = false;
-        joinBtn.disabled = false;
-    } else {
-        statusElement.innerHTML = '<span class="status-icon">✗</span> <span>Bluetooth indisponible</span>';
-        statusElement.classList.remove('available');
-        createBtn.disabled = true;
-        joinBtn.disabled = true;
-    }
+    statusElement.innerHTML = '<span class="status-icon">✅</span> <span>Connecté au serveur</span>';
+    statusElement.classList.add('available');
+    createBtn.disabled = false;
+    joinBtn.disabled = false;
 }
 
 /**
@@ -88,8 +81,8 @@ function attachEventListeners() {
     document.getElementById('continueBtn').addEventListener('click', continueGame);
     document.getElementById('dismissMessageBtn').addEventListener('click', dismissMessage);
 
-    // Bluetooth events
-    AppState.bluetoothManager.onMessage((message) => handleBluetoothMessage(message));
+    // Réseau events
+    AppState.networkManager.onMessage((message) => handleNetworkMessage(message));
 
     // Événements personnalisés
     window.addEventListener ('playerJoined', (e) => handlePlayerJoined(e.detail));
@@ -134,17 +127,18 @@ async function createGame() {
     AppState.isPresenter = true;
     saveSettings();
 
-    // Créer la partie via Bluetooth
-    const success = await AppState.bluetoothManager.createGame(playerName);
-    if (!success) {
-        showMessage('Erreur lors de la création de la partie');
-        return;
-    }
+    try {
+        // Créer la partie via réseau
+        const result = await AppState.networkManager.createGame(playerName);
+        AppState.myId = result.playerId;
 
-    // Afficher l'écran présentateur
-    showPresenterScreen();
-    updatePlayerCountDisplay();
-    updateRolesList();
+        // Afficher l'écran présentateur
+        showPresenterScreen();
+        updatePlayerCountDisplay();
+        updateRolesList();
+    } catch (err) {
+        showMessage('Erreur lors de la création de la partie: ' + err.message);
+    }
 }
 
 /**
@@ -157,19 +151,24 @@ async function joinGame() {
         return;
     }
 
+    // Demander le code de salle
+    const gameCode = prompt('Entrez le code de la salle (4 chiffres):');
+    if (!gameCode) return;
+
     AppState.myName = playerName;
     saveSettings();
 
-    // Se connecter via Bluetooth
-    const success = await AppState.bluetoothManager.joinGame(playerName);
-    if (!success) {
-        showMessage('Impossible de se connecter');
-        return;
-    }
+    try {
+        // Se connecter via réseau
+        const result = await AppState.networkManager.joinGame(gameCode, playerName);
+        AppState.myId = result.playerId;
 
-    // Afficher l'écran joueur
-    document.getElementById('playerNameDisplay').textContent = playerName;
-    showPlayerScreen();
+        // Afficher l'écran joueur
+        document.getElementById('playerNameDisplay').textContent = playerName;
+        showPlayerScreen();
+    } catch (err) {
+        showMessage('Impossible de se connecter: ' + err.message);
+    }
 }
 
 // ============================================
@@ -308,10 +307,7 @@ function startGame() {
     showNightPhase();
 
     // Synchroniser avec les joueurs
-    AppState.bluetoothManager.sendMessage({
-        type: 'gameStarted',
-        state: AppState.gameController.getGameState()
-    });
+    AppState.networkManager.startGame(shuffledRoles);
 }
 
 /**
@@ -762,7 +758,7 @@ function dismissMessage() {
  */
 function disconnect() {
     if (confirm('Êtes-vous sûr de vouloir quitter?')) {
-        AppState.bluetoothManager.disconnect();
+        AppState.networkManager.disconnect();
         backToLobby();
     }
 }
@@ -774,17 +770,21 @@ function disconnect() {
 /**
  * Traiter les messages Bluetooth
  */
-function handleBluetoothMessage(message) {
+function handleNetworkMessage(message) {
     console.log('[APP] Message reçu:', message.type);
 
     switch (message.type) {
-        case 'connected':
-            handlePlayerConnected(message);
+        case 'GAME_STARTED':
+            console.log('Jeu démarré');
             break;
-        case 'playerJoined':
-            handlePlayerJoined(message);
+        case 'PHASE_CHANGED':
+            console.log('Phase changée:', message.phase);
             break;
-        case 'gameStarted':
+        case 'PLAYER_ELIMINATED':
+            console.log('Joueur éliminé:', message.playerId);
+            break;
+        case 'VOTE_SUBMITTED':
+            console.log('Vote soumis:', message.voterId);
             break;
     }
 }
