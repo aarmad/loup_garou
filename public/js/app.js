@@ -15,7 +15,9 @@ const AppState = {
     connectedPlayers: [],
     selectedRoles: [],
     selectedPlayerCount: 3,
-    gameStarted: false
+    gameStarted: false,
+    phaseTimerInterval: null,
+    phaseSecondsLeft: 0
 };
 
 /**
@@ -37,8 +39,26 @@ function initializeApp() {
     // Charger les paramètres sauvegardés
     loadSavedSettings();
 
-    // Écouter les changements localStorage
+    // Écouter les changements localStorage (pour un onglet)
     window.addEventListener('storage', handleStorageChange);
+
+    // Écouter les changements via NetworkManager (pour multi-appareils)
+    AppState.networkManager.addEventListener((event) => {
+        if (!event || !event.type) return;
+
+        if (event.type === 'GAME_STATE_CHANGED' || event.type === 'GAME_STATE_UPDATED') {
+            const gameState = event.data;
+            if (!gameState) return;
+
+            if (AppState.isPresenter) {
+                updateConnectedPlayers(gameState);
+                updateRolesList();
+            } else {
+                syncGameState(gameState);
+                updateConnectedPlayers(gameState);
+            }
+        }
+    });
 
     console.log('Application initialisée ✓');
 }
@@ -75,6 +95,7 @@ function attachEventListeners() {
     document.getElementById('startVotingBtn').addEventListener('click', startVoting);
     document.getElementById('confirmVoteBtn').addEventListener('click', confirmVote);
     document.getElementById('retryVoteBtn').addEventListener('click', retryVote);
+    document.getElementById('skipPhaseBtn').addEventListener('click', skipPhase);
 
     // Joueur
     document.getElementById('disconnectBtn').addEventListener('click', disconnect);
@@ -153,6 +174,9 @@ async function createGame() {
         updatePlayerCountDisplay();
         updateRolesList();
 
+        // Mettre à jour l'affichage du compteur players
+        updateConnectedPlayers(AppState.networkManager.getGameState());
+
         // Notification courte du code
         showMessage(`Partie créée! Code salle: ${result.gameId}`);
     } catch (err) {
@@ -182,6 +206,10 @@ async function joinGame() {
         // Se connecter via réseau
         const result = await AppState.networkManager.joinGame(gameCode, playerName);
         AppState.myId = result.playerId;
+
+        // Mise à jour du compteur et du numéro de salle
+        updateRoomNumberDisplay(gameCode);
+        updateConnectedPlayers(AppState.networkManager.getGameState());
 
         // Afficher l'écran joueur
         document.getElementById('playerNameDisplay').textContent = playerName;
@@ -243,6 +271,54 @@ function updateRoomNumberDisplay(roomNumber) {
     
     if (presenterRoom) presenterRoom.textContent = roomNumber;
     if (playerRoom) playerRoom.textContent = roomNumber;
+}
+
+function formatTimer(seconds) {
+    const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const sec = (seconds % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+}
+
+function startPhaseTimer(durationSeconds) {
+    stopPhaseTimer();
+    AppState.phaseSecondsLeft = durationSeconds;
+
+    const phaseTimerEl = document.getElementById('phaseTimer');
+    if (phaseTimerEl) phaseTimerEl.textContent = formatTimer(durationSeconds);
+
+    AppState.phaseTimerInterval = setInterval(() => {
+        AppState.phaseSecondsLeft -= 1;
+        if (phaseTimerEl) phaseTimerEl.textContent = formatTimer(AppState.phaseSecondsLeft);
+
+        if (AppState.phaseSecondsLeft <= 0) {
+            stopPhaseTimer();
+            if (AppState.isPresenter) {
+                if (AppState.gameController.getGameState().phase === 'night') {
+                    nextNightAction();
+                } else {
+                    startVoting();
+                }
+            }
+        }
+    }, 1000);
+}
+
+function stopPhaseTimer() {
+    if (AppState.phaseTimerInterval) {
+        clearInterval(AppState.phaseTimerInterval);
+        AppState.phaseTimerInterval = null;
+    }
+}
+
+function skipPhase() {
+    stopPhaseTimer();
+
+    const phase = AppState.gameController.getGameState().phase;
+    if (phase === 'night') {
+        nextNightAction();
+    } else if (phase === 'day') {
+        startVoting();
+    }
 }
 
 /**
@@ -385,6 +461,9 @@ function showNightPhase() {
     document.getElementById('votingPanel').classList.remove('active');
 
     updateNightActionsList();
+
+    // Timer de phase nocturne (60s par défaut - le présentateur peut passer)
+    startPhaseTimer(60);
 }
 
 /**
@@ -440,12 +519,17 @@ function nextNightAction() {
     }
 
     const hasNext = AppState.gameController.nextNightAction();
+
+    stopPhaseTimer();
     
     if (!hasNext) {
         // Fin de la nuit - passage au jour
+        AppState.networkManager.updateGameState({ currentPhase: 'day' });
         showDayPhase();
     } else {
         updateNightActionsList();
+        // relancer timer pour la prochaine action si besoin
+        startPhaseTimer(45);
     }
 }
 
@@ -460,6 +544,9 @@ function showDayPhase() {
     document.getElementById('votingPanel').classList.remove('active');
 
     updatePlayersList();
+
+    // Timer de discussion de jour (120s par défaut)
+    startPhaseTimer(120);
 }
 
 /**
@@ -501,15 +588,12 @@ function updatePlayersList() {
  * Démarrer la phase de vote
  */
 function startVoting() {
-    const alivePlayers = AppState.gameController.getAlivePlayers();
-    
-    // Les joueurs doivent voter
+    stopPhaseTimer();
     AppState.networkManager.updateGameState({ currentPhase: 'voting' });
 
     document.getElementById('dayPanel').classList.remove('active');
     document.getElementById('votingPanel').classList.add('active');
 
-    // Afficher les résultats de vote (en temps réel)
     setTimeout(() => {
         showVoteResults();
     }, 5000);
