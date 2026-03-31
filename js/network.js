@@ -1,40 +1,32 @@
 /**
  * LOUP-GAROU - GESTION RÉSEAU (WiFi/Internet)
- * Synchronisation de l'état du jeu via HTTP/WebSocket
- * Connexion simple par code de salle
+ * Synchronisation via API HTTP (Vercel + localStorage)
  */
 
 class NetworkManager {
     constructor() {
-        // État de la connexion
         this.isConnected = false;
         this.isPresenter = false;
         this.gameId = null;
         this.playerId = null;
         this.playerName = null;
-        this.serverUrl = this.getServerUrl();
-
-        // WebSocket
-        this.ws = null;
-
-        // Listeners
         this.listeners = [];
-
-        // File d'attente des messages
         this.messageQueue = [];
         this.isProcessing = false;
-
-        // État local du jeu
         this.gameState = null;
+        this.syncInterval = null;
+        this.apiBaseUrl = this.getApiUrl();
     }
 
     /**
-     * Obtenir l'URL du serveur (adapté à localhost ou domaine)
+     * Obtient l'URL de l'API (localhost ou Vercel)
      */
-    getServerUrl() {
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const host = window.location.host;
-        return `${protocol}://${host}`;
+    getApiUrl() {
+        // Sur Vercel ou en production
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            return window.location.origin;
+        }
+        return 'http://localhost:3000';
     }
 
     /**
@@ -43,25 +35,34 @@ class NetworkManager {
     async createGame(playerName) {
         try {
             this.playerName = playerName;
-            const response = await fetch('/api/game/create', {
+            const response = await fetch(`${this.apiBaseUrl}/api/games`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ presenterName: playerName })
+                body: JSON.stringify({ 
+                    host: playerName,
+                    roles: []
+                })
             });
 
             if (!response.ok) throw new Error('Erreur création partie');
 
             const data = await response.json();
-            this.gameId = data.gameId;
-            this.playerId = data.playerId;
+            this.gameId = data.code;
+            this.playerId = `presenter-${Date.now()}`;
             this.isPresenter = true;
+            this.isConnected = true;
 
-            // Connecter au WebSocket
-            await this.connectToGame();
+            // Sauvegarder localement
+            localStorage.setItem('gameId', this.gameId);
+            localStorage.setItem('playerId', this.playerId);
+            localStorage.setItem('isPresenter', 'true');
+
+            // Démarrer la synchronisation
+            this.startSync();
 
             return {
                 gameId: this.gameId,
-                joinCode: data.joinCode,
+                joinCode: this.gameId,
                 playerId: this.playerId
             };
         } catch (err) {
@@ -78,25 +79,31 @@ class NetworkManager {
             this.playerName = playerName;
             this.gameId = gameId;
 
-            const response = await fetch(`/api/game/${gameId}/join`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerName: playerName })
-            });
-
-            if (!response.ok) throw new Error('Erreur connexion partie');
+            // Vérifier que la partie existe
+            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${gameId}`);
+            
+            if (!response.ok) throw new Error('Partie non trouvée');
 
             const data = await response.json();
-            this.playerId = data.playerId;
-            this.isPresenter = false;
+            if (!data.success) throw new Error(data.error || 'Partie non trouvée');
 
-            // Connecter au WebSocket
-            await this.connectToGame();
+            this.playerId = `player-${Date.now()}`;
+            this.isPresenter = false;
+            this.isConnected = true;
+
+            // Sauvegarder localement
+            localStorage.setItem('gameId', this.gameId);
+            localStorage.setItem('playerId', this.playerId);
+            localStorage.setItem('isPresenter', 'false');
+            localStorage.setItem('playerName', playerName);
+
+            // Démarrer la synchronisation
+            this.startSync();
 
             return {
                 gameId: this.gameId,
                 playerId: this.playerId,
-                players: data.players
+                players: data.game.players || []
             };
         } catch (err) {
             console.error('Erreur connexion partie:', err);
@@ -105,41 +112,52 @@ class NetworkManager {
     }
 
     /**
+     * Démarrer la synchronisation avec l'API
+     */
+    startSync() {
+        if (!this.syncInterval) {
+            // Synchroniser toutes les 2 secondes
+            this.syncInterval = setInterval(() => {
+                this.syncGameState();
+            }, 2000);
+        }
+    }
+
+    /**
+     * Synchronise l'état de la partie
+     */
+    async syncGameState() {
+        if (!this.gameId) return;
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${this.gameId}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.success) {
+                    const game = data.game;
+                    
+                    // Comparer avec l'état local
+                    if (JSON.stringify(game) !== JSON.stringify(this.gameState)) {
+                        this.gameState = game;
+                        this.notifyListeners({
+                            type: 'STATE_UPDATE',
+                            gameState: game
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Erreur synchronisation:', error);
+        }
+    }
+
+    /**
      * Se connecter au WebSocket de la partie
      */
     connectToGame() {
-        return new Promise((resolve, reject) => {
-            try {
-                const wsUrl = `${this.serverUrl}/ws?gameId=${this.gameId}&playerId=${this.playerId}`;
-                this.ws = new WebSocket(wsUrl);
-
-                this.ws.onopen = () => {
-                    console.log('✅ Connecté au serveur');
-                    this.isConnected = true;
-                    this.processMessageQueue();
-                    resolve();
-                };
-
-                this.ws.onmessage = (event) => {
-                    const message = JSON.parse(event.data);
-                    this.handleMessage(message);
-                };
-
-                this.ws.onerror = (error) => {
-                    console.error('Erreur WebSocket:', error);
-                    reject(error);
-                };
-
-                this.ws.onclose = () => {
-                    console.warn('Déconnexion du serveur');
-                    this.isConnected = false;
-                    // Tenter reconnexion après 3s
-                    setTimeout(() => this.reconnect(), 3000);
-                };
-            } catch (err) {
-                reject(err);
-            }
-        });
+        return Promise.resolve(); // Pas besoin de WebSocket avec l'API HTTP
     }
 
     /**
@@ -147,20 +165,16 @@ class NetworkManager {
      */
     async reconnect() {
         if (!this.isConnected && this.gameId && this.playerId) {
-            try {
-                await this.connectToGame();
-            } catch (err) {
-                console.error('Reconnexion échouée:', err);
-                setTimeout(() => this.reconnect(), 3000);
-            }
+            this.isConnected = true;
+            this.startSync();
         }
     }
 
     /**
-     * Traiter un message reçu du serveur
+     * Traiter un message reçu
      */
     handleMessage(message) {
-        console.log('📨 Message reçu:', message.type);
+        console.log('📨 Message:', message.type);
 
         // Mettre à jour l'état local
         if (message.gameState) {
@@ -192,29 +206,49 @@ class NetworkManager {
     }
 
     /**
-     * Envoyer un message au serveur
+     * Envoyer une action au serveur (mise à jour API)
      */
-    sendMessage(message) {
+    async sendMessage(message) {
         if (!message.gameId) message.gameId = this.gameId;
         if (!message.playerId) message.playerId = this.playerId;
 
-        if (!this.isConnected) {
-            // Ajouter à la file d'attente si non connecté
-            this.messageQueue.push(message);
-            return;
-        }
+        try {
+            const updates = {
+                type: message.type,
+                playerId: message.playerId,
+                ...message
+            };
 
-        this.ws.send(JSON.stringify(message));
+            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${this.gameId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.gameState = data.game;
+                this.notifyListeners({
+                    type: 'STATE_UPDATE',
+                    gameState: data.game
+                });
+            }
+        } catch (err) {
+            console.error('Erreur envoi message:', err);
+            if (!this.isProcessing) {
+                this.messageQueue.push(message);
+            }
+        }
     }
 
     /**
      * Traiter la file d'attente des messages
      */
-    processMessageQueue() {
+    async processMessageQueue() {
         while (this.messageQueue.length > 0 && !this.isProcessing) {
             this.isProcessing = true;
             const message = this.messageQueue.shift();
-            this.ws.send(JSON.stringify(message));
+            await this.sendMessage(message);
             this.isProcessing = false;
         }
     }
@@ -222,18 +256,19 @@ class NetworkManager {
     /**
      * Démarrer la partie (Présentateur uniquement)
      */
-    startGame(roles) {
-        this.sendMessage({
+    async startGame(roles) {
+        return this.sendMessage({
             type: 'GAME_START',
-            roles: roles
+            roles: roles,
+            state: 'playing'
         });
     }
 
     /**
      * Soumettre une action nocturne
      */
-    submitNightAction(action) {
-        this.sendMessage({
+    async submitNightAction(action) {
+        return this.sendMessage({
             type: 'NIGHT_ACTION',
             action: action
         });
@@ -242,8 +277,8 @@ class NetworkManager {
     /**
      * Voter pour éliminer quelqu'un
      */
-    submitVote(targetPlayerId) {
-        this.sendMessage({
+    async submitVote(targetPlayerId) {
+        return this.sendMessage({
             type: 'VOTE',
             targetPlayerId: targetPlayerId
         });
@@ -252,8 +287,8 @@ class NetworkManager {
     /**
      * Passer à la phase suivante (Présentateur)
      */
-    nextPhase() {
-        this.sendMessage({
+    async nextPhase() {
+        return this.sendMessage({
             type: 'NEXT_PHASE'
         });
     }
@@ -261,8 +296,8 @@ class NetworkManager {
     /**
      * Éliminer un joueur (Présentateur)
      */
-    eliminatePlayer(playerId) {
-        this.sendMessage({
+    async eliminatePlayer(playerId) {
+        return this.sendMessage({
             type: 'ELIMINATE_PLAYER',
             playerId: playerId
         });
@@ -273,8 +308,10 @@ class NetworkManager {
      */
     async getPlayers() {
         try {
-            const response = await fetch(`/api/game/${this.gameId}/players`);
-            return await response.json();
+            if (this.gameState) {
+                return this.gameState.players || [];
+            }
+            return [];
         } catch (err) {
             console.error('Erreur récupération joueurs:', err);
             return [];
@@ -285,12 +322,19 @@ class NetworkManager {
      * Se déconnecter
      */
     disconnect() {
-        if (this.ws) {
-            this.ws.close();
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
         }
         this.isConnected = false;
         this.gameId = null;
         this.playerId = null;
+        
+        // Effacer le localStorage
+        localStorage.removeItem('gameId');
+        localStorage.removeItem('playerId');
+        localStorage.removeItem('isPresenter');
+        localStorage.removeItem('playerName');
     }
 }
 

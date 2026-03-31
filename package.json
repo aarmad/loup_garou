@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "echo 'Build complete'",
     "cert": "openssl req -x509 -newkey rsa:2048 -nodes -out cert/cert.pem -keyout cert/key.pem -days 365 -subj '/C=FR/ST=Ile-de-France/L=Paris/O=Loup-Garou/CN=localhost'"
   },
   "keywords": [
