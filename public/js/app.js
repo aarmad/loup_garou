@@ -9,6 +9,7 @@ const AppState = {
     myRole: null,
     myId: null,
     isPresenter: false,
+    currentRoomNumber: null,
     gameController: null,
     networkManager: null,
     connectedPlayers: [],
@@ -141,14 +142,19 @@ async function createGame() {
         // Créer la partie via réseau
         const result = await AppState.networkManager.createGame(playerName);
         AppState.myId = result.playerId;
+        AppState.currentRoomNumber = result.gameId;
 
         // Afficher l'écran présentateur
         showPresenterScreen();
+        
+        // Afficher le numéro de salle en permanence
+        updateRoomNumberDisplay(result.gameId);
+        
         updatePlayerCountDisplay();
         updateRolesList();
 
-        // Afficher le code
-        showMessage(`Code de la salle: ${result.gameId}`);
+        // Notification courte du code
+        showMessage(`Partie créée! Code salle: ${result.gameId}`);
     } catch (err) {
         showMessage('Erreur lors de la création de la partie: ' + err.message);
     }
@@ -169,6 +175,7 @@ async function joinGame() {
     if (!gameCode) return;
 
     AppState.myName = playerName;
+    AppState.currentRoomNumber = gameCode;
     saveSettings();
 
     try {
@@ -178,6 +185,7 @@ async function joinGame() {
 
         // Afficher l'écran joueur
         document.getElementById('playerNameDisplay').textContent = playerName;
+        document.getElementById('playerRoomNumber').textContent = gameCode;
         showPlayerScreen();
         showWaitingPanel();
     } catch (err) {
@@ -223,6 +231,18 @@ function decreasePlayerCount() {
 function updatePlayerCountDisplay() {
     document.getElementById('playerCountDisplay').textContent = AppState.selectedPlayerCount;
     updateRolesList();
+}
+
+/**
+ * Mettre à jour le numéro de salle
+ */
+function updateRoomNumberDisplay(roomNumber) {
+    AppState.currentRoomNumber = roomNumber;
+    const presenterRoom = document.getElementById('roomNumber');
+    const playerRoom = document.getElementById('playerRoomNumber');
+    
+    if (presenterRoom) presenterRoom.textContent = roomNumber;
+    if (playerRoom) playerRoom.textContent = roomNumber;
 }
 
 /**
@@ -621,11 +641,10 @@ function showPlayerRole(player) {
     if (!role) return;
 
     // Afficher l'image du rôle
-    const roleEmojiDiv = document.getElementById('roleEmoji');
-    if (role.image) {
-        roleEmojiDiv.innerHTML = `<img src="${role.image}" alt="${role.name}" />`;
-    } else {
-        roleEmojiDiv.textContent = role.emoji;
+    const roleImg = document.getElementById('roleImg');
+    if (role.image && roleImg) {
+        roleImg.src = role.image;
+        roleImg.alt = role.name;
     }
     
     document.getElementById('roleName').textContent = role.name;

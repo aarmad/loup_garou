@@ -4,36 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Jeu de Loup-Garou en présentiel avec WiFi/Internet">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#6366f1">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🐺</text></svg>">
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%236366f1'/%3E%3Ctext x='50' y='55' font-size='60' text-anchor='middle' fill='white' font-weight='bold'%3E🐺%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/modern.css">
     <title>Loup-Garou - Jeu en Présentiel</title>
 </head>
 <body>
     <!-- ÉCRAN LOBBY -->
     <div id="lobbyScreen" class="screen active">
         <div class="lobby-container">
-            <div class="logo">🐺</div>
-            <h1>Loup-Garou</h1>
-            <p class="subtitle">Jeu en Présentiel</p>
+            <div class="lobby-logo">
+                <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="40" fill="#6366f1"/>
+                    <ellipse cx="50" cy="40" rx="15" ry="18" fill="white"/>
+                    <circle cx="38" cy="35" r="4" fill="#1f2937"/>
+                    <circle cx="62" cy="35" r="4" fill="#1f2937"/>
+                    <path d="M 50 45 L 45 55 L 55 55 Z" fill="white"/>
+                    <path d="M 35 50 Q 30 55 35 60" stroke="white" stroke-width="2" fill="none"/>
+                    <path d="M 65 50 Q 70 55 65 60" stroke="white" stroke-width="2" fill="none"/>
+                </svg>
+            </div>
+            
+            <h1 class="lobby-title">Loup-Garou</h1>
+            <p class="lobby-subtitle">Jeu en Présentiel</p>
             
             <div class="form-group">
                 <label for="playerName">Votre pseudo</label>
                 <input type="text" id="playerName" placeholder="Entrez votre nom..." maxlength="20">
             </div>
 
-            <div id="bluetoothStatus" class="status-info">
-                <span class="status-icon">✅</span>
-                <span>Connecté au serveur</span>
+            <div id="bluetoothStatus" class="status-badge success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M7 7l10 10M7 17l10-10"/>
+                </svg>
+                <span>Prêt à jouer</span>
             </div>
 
             <div class="button-group">
                 <button id="createGameBtn" class="btn btn-primary" disabled>
-                    <span>📱</span> Créer une Partie
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M12 17v-2M12 8v-2M12 12h.01"/>
+                    </svg>
+                    Créer une Partie
                 </button>
                 <button id="joinGameBtn" class="btn btn-secondary" disabled>
-                    <span>🔗</span> Rejoindre une Partie
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                        <path d="M21 14h-5M21 10h-5"/>
+                    </svg>
+                    Rejoindre une Partie
                 </button>
             </div>
 
@@ -43,23 +65,28 @@
 
     <!-- ÉCRAN PRÉSENTATEUR -->
     <div id="presenterScreen" class="screen">
-        <header class="presenter-header">
-            <div class="header-left">
-                <button id="backBtn" class="btn-icon">←</button>
+        <div class="app-header">
+            <div class="header-content">
+                <button id="backBtn" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </button>
                 <h2>Présentateur</h2>
             </div>
-            <div class="header-right">
-                <span id="playerCount" class="badge">0</span>
+            <div class="room-badge">
+                <span class="room-label">Salle</span>
+                <span id="roomNumber" class="room-number">—</span>
             </div>
-        </header>
+        </div>
 
-        <div class="presenter-content">
+        <div class="app-content">
             <!-- Section Configuration -->
             <div id="configSection" class="section">
                 <h3>Configuration de la Partie</h3>
                 
                 <div class="form-group">
-                    <label for="playerCountInput">Nombre de joueurs</label>
+                    <label>Nombre de joueurs</label>
                     <div class="number-input">
                         <button id="decPlayersBtn">−</button>
                         <span id="playerCountDisplay">0</span>
@@ -81,12 +108,16 @@
             <div id="gameSection" class="section hidden">
                 <div class="game-status">
                     <div class="status-card">
-                        <div class="status-label">Phase Actuelle</div>
+                        <div class="status-label">Phase</div>
                         <div id="currentPhase" class="status-value">—</div>
                     </div>
                     <div class="status-card">
-                        <div class="status-label">Jour #</div>
+                        <div class="status-label">Jour</div>
                         <div id="dayCount" class="status-value">1</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Joueurs</div>
+                        <div id="playerCount" class="status-value">0</div>
                     </div>
                 </div>
 
@@ -130,20 +161,24 @@
 
     <!-- ÉCRAN JOUEUR -->
     <div id="playerScreen" class="screen">
-        <header class="player-header">
-            <div class="header-left">
+        <div class="app-header">
+            <div class="header-content">
                 <h2 id="playerNameDisplay">Joueur</h2>
             </div>
-            <div class="header-right">
-                <button id="disconnectBtn" class="btn-icon">⊗</button>
+            <div class="room-badge">
+                <span class="room-label">Salle</span>
+                <span id="playerRoomNumber" class="room-number">—</span>
             </div>
-        </header>
+        </div>
 
-        <div class="player-content">
+        <div class="app-content">
             <!-- Attente -->
-            <div id="waitingPanel" class="panel hidden">
+            <div id="waitingPanel" class="panel">
                 <div class="waiting-message">
-                    <div class="spinner"></div>
+                    <svg class="spinner" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="24" cy="24" r="20" stroke="#6366f1" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="0" opacity="0.25"/>
+                        <circle cx="24" cy="24" r="20" stroke="#6366f1" stroke-width="2" stroke-dasharray="31.4" stroke-linecap="round"/>
+                    </svg>
                     <p>En attente du démarrage...</p>
                 </div>
             </div>
@@ -151,7 +186,9 @@
             <!-- Info Rôle -->
             <div id="rolePanel" class="panel hidden">
                 <div class="role-display">
-                    <div id="roleEmoji" class="role-emoji">?</div>
+                    <div id="roleImage" class="role-image">
+                        <img src="" alt="Rôle" id="roleImg">
+                    </div>
                     <h2 id="roleName">Rôle</h2>
                     <p id="roleDescription" class="role-description"></p>
                 </div>
@@ -187,7 +224,11 @@
             <!-- Éliminé -->
             <div id="eliminatedPanel" class="panel hidden">
                 <div class="eliminated-message">
-                    <div class="message-icon">⚰️</div>
+                    <svg class="message-icon" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M32 8C18.7 8 8 18.7 8 32s10.7 24 24 24 24-10.7 24-24S45.3 8 32 8zm0 44c-11 0-20-9-20-20s9-20 20-20 20 9 20 20-9 20-20 20z" fill="#ef4444"/>
+                        <line x1="24" y1="24" x2="40" y2="40" stroke="#ef4444" stroke-width="2"/>
+                        <line x1="40" y1="24" x2="24" y2="40" stroke="#ef4444" stroke-width="2"/>
+                    </svg>
                     <h3>Vous avez été éliminé</h3>
                     <p>Vous pouvez suivre le jeu mais ne pouvez plus voter.</p>
                 </div>
@@ -218,7 +259,15 @@
                 </div>
             </div>
         </div>
-    </div>
+
+        <div class="player-footer">
+            <button id="disconnectBtn" class="btn-icon-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 13l4-4m0 0l-4-4m4 4H9"/>
+                </svg>
+                Quitter
+            </button>
+        </div>
 
     <!-- Scripts -->
     <script src="js/roles.js"></script>

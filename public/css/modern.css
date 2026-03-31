@@ -1,0 +1,907 @@
+/* ============================================
+   LOUP-GAROU - STYLES MODERNES SANS EMOJI
+   Inspiré de to-do-listng.netlify.app
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --light: #f9fafb;
+    --light-secondary: #f3f4f6;
+    --light-tertiary: #e5e7eb;
+    --dark: #1f2937;
+    --dark-secondary: #374151;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-radius: 8px;
+    --transition: all 0.2s ease;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #fafbfc 0%, #f3f4f6 100%);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   ÉCRANS
+   ============================================ */
+
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    background: white;
+    z-index: 100;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* ============================================
+   LOBBY
+   ============================================ */
+
+.lobby-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.lobby-logo {
+    margin-bottom: 24px;
+    animation: float 3s ease-in-out infinite;
+}
+
+.lobby-logo svg {
+    filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.lobby-title {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.lobby-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.form-group {
+    width: 100%;
+    margin-bottom: 24px;
+    max-width: 320px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    transition: var(--transition);
+    background: white;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.status-badge.success {
+    background: #f0fdf4;
+    color: var(--success);
+    border: 1px solid #dcfce7;
+}
+
+.status-badge svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.debug-info {
+    margin-top: 30px;
+    padding: 12px;
+    background: var(--light);
+    border-radius: var(--border-radius);
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: none;
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+/* ============================================
+   BOUTONS
+   ============================================ */
+
+.btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    text-decoration: none;
+    user-select: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: scale(0.96);
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3);
+}
+
+.btn-secondary {
+    background: var(--light-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--light-tertiary);
+}
+
+.btn-secondary:active:not(:disabled) {
+    background: var(--light-tertiary);
+}
+
+.btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    border-radius: var(--border-radius);
+}
+
+.btn-icon:active {
+    background: var(--light-secondary);
+    color: var(--primary);
+}
+
+.btn-icon-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--danger);
+    transition: var(--transition);
+    width: 100%;
+}
+
+.btn-icon-text:active {
+    background: #fef2f2;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: white;
+    border-bottom: 1px solid var(--light-tertiary);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    min-height: 56px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.header-content h2 {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.room-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.room-label {
+    opacity: 0.9;
+}
+
+.room-number {
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ============================================
+   CONTENU APP
+   ============================================ */
+
+.app-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: linear-gradient(180deg, white 0%, #fafbfc 100%);
+}
+
+.section {
+    margin-bottom: 20px;
+    animation: slideUp 0.3s ease;
+}
+
+.section.hidden {
+    display: none;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+}
+
+.section h4 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.panel {
+    animation: slideUp 0.3s ease;
+}
+
+.panel.hidden {
+    display: none;
+}
+
+/* ============================================
+   CONFIGURATION
+   ============================================ */
+
+.number-input {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: white;
+}
+
+.number-input button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--primary);
+    transition: var(--transition);
+    font-weight: 600;
+}
+
+.number-input button:active {
+    background: var(--light);
+}
+
+.number-input span {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    border-left: 1px solid var(--light-tertiary);
+    border-right: 1px solid var(--light-tertiary);
+}
+
+.roles-config {
+    margin-bottom: 16px;
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.role-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 11px;
+    font-weight: 600;
+    background: white;
+}
+
+.role-toggle:active {
+    transform: scale(0.94);
+}
+
+.role-toggle.active {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    color: var(--primary);
+}
+
+.role-toggle img {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 6px;
+    object-fit: contain;
+}
+
+/* ============================================
+   STATUS CARDS
+   ============================================ */
+
+.game-status {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.status-card {
+    padding: 14px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.status-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.status-value {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ============================================
+   PHASE PANELS
+   ============================================ */
+
+.phase-panel {
+    margin-bottom: 20px;
+    display: none;
+}
+
+.phase-panel.active,
+.phase-panel.hidden.active {
+    display: block;
+    animation: slideUp 0.3s ease;
+}
+
+.phase-panel h3 {
+    margin-bottom: 14px;
+}
+
+.night-controls,
+.voting-controls,
+.day-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.night-controls button,
+.voting-controls button,
+.day-controls button {
+    flex: 1;
+}
+
+.actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.action-item {
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    border-left: 3px solid transparent;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.action-item.active {
+    border-left-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.action-item.completed {
+    opacity: 0.6;
+    border-left-color: var(--success);
+}
+
+.day-info {
+    padding: 14px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    margin-bottom: 14px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.votes-display {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.vote-item {
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+/* ============================================
+   RÔLES ET JOUEURS
+   ============================================ */
+
+.role-display {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.role-image {
+    margin-bottom: 16px;
+}
+
+.role-image img {
+    max-width: 120px;
+    max-height: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+#roleName {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.role-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.role-instructions {
+    padding: 14px;
+    background: var(--light);
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.player-item {
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.player-item.alive {
+    border-left: 3px solid var(--success);
+}
+
+.player-item.eliminated {
+    border-left: 3px solid var(--danger);
+    opacity: 0.6;
+}
+
+.player-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+}
+
+.player-status.alive {
+    background: var(--success);
+}
+
+.player-status.eliminated {
+    background: var(--danger);
+}
+
+/* ============================================
+   ACTIONS NOCTURNES
+   ============================================ */
+
+.action-prompt {
+    padding: 14px;
+    background: var(--light);
+    border-radius: var(--border-radius);
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.target-item {
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    text-align: center;
+}
+
+.target-item:active {
+    transform: scale(0.98);
+}
+
+.target-item.selected {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ============================================
+   RÉSULTATS
+   ============================================ */
+
+.result-message {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.result-status {
+    font-size: 24px;
+    margin-bottom: 12px;
+    min-height: 30px;
+}
+
+#resultText {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   ÉLIMINÉ
+   ============================================ */
+
+.eliminated-message {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.message-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.eliminated-message h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--danger);
+}
+
+.eliminated-message p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   ATTENDENTE
+   ============================================ */
+
+.waiting-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    text-align: center;
+}
+
+.waiting-message p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.spinner {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   MESSAGES
+   ============================================ */
+
+.message-box {
+    padding: 16px;
+    background: var(--light);
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+}
+
+.message-box p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.voting-prompt {
+    padding: 14px;
+    background: var(--light);
+    border-radius: var(--border-radius);
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ============================================
+   ÉTAT DU JEU
+   ============================================ */
+
+.game-state-info {
+    padding: 14px;
+    background: white;
+    border: 1px solid var(--light-tertiary);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.state-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.state-row span:first-child {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.state-row span:last-child {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   FOOTER PLAYER
+   ============================================ */
+
+.player-footer {
+    padding: 16px;
+    border-top: 1px solid var(--light-tertiary);
+    background: white;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (min-width: 480px) {
+    .game-status {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .roles-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .button-group {
+        max-width: 360px;
+    }
+}
+
+@media (min-width: 768px) {
+    .lobby-container {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .app-content {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .button-group {
+        flex-direction: row;
+        max-width: none;
+    }
+
+    .roles-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
