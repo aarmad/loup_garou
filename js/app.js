@@ -231,8 +231,14 @@ function updateRolesList() {
 
         const toggle = document.createElement('div');
         toggle.className = 'role-toggle' + (isSelected ? ' active' : '');
+        
+        let roleDisplay = role.emoji;
+        if (role.image) {
+            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 100%; height: 100%; object-fit: contain;" />`;
+        }
+        
         toggle.innerHTML = `
-            <div class="role-toggle-emoji">${role.emoji}</div>
+            <div class="role-toggle-emoji">${roleDisplay}</div>
             <div style="font-size: 11px; text-align: center;">${role.name}</div>
         `;
 
@@ -566,7 +572,15 @@ function showPlayerRole(detail) {
     AppState.myId = detail.playerId;
 
     const role = ROLES[detail.role];
-    document.getElementById('roleEmoji').textContent = role.emoji;
+    
+    // Afficher l'image du rôle
+    const roleEmojiDiv = document.getElementById('roleEmoji');
+    if (role.image) {
+        roleEmojiDiv.innerHTML = `<img src="${role.image}" alt="${role.name}" />`;
+    } else {
+        roleEmojiDiv.textContent = role.emoji;
+    }
+    
     document.getElementById('roleName').textContent = role.name;
     document.getElementById('roleDescription').textContent = role.description;
 
