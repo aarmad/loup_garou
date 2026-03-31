@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Jeu de Loup-Garou en présentiel avec WiFi/Internet">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🐺</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <title>Loup-Garou - Jeu en Présentiel</title>
+</head>
+<body>
+    <!-- ÉCRAN LOBBY -->
+    <div id="lobbyScreen" class="screen active">
+        <div class="lobby-container">
+            <div class="logo">🐺</div>
+            <h1>Loup-Garou</h1>
+            <p class="subtitle">Jeu en Présentiel</p>
+            
+            <div class="form-group">
+                <label for="playerName">Votre pseudo</label>
+                <input type="text" id="playerName" placeholder="Entrez votre nom..." maxlength="20">
+            </div>
+
+            <div id="bluetoothStatus" class="status-info">
+                <span class="status-icon">✅</span>
+                <span>Connecté au serveur</span>
+            </div>
+
+            <div class="button-group">
+                <button id="createGameBtn" class="btn btn-primary" disabled>
+                    <span>📱</span> Créer une Partie
+                </button>
+                <button id="joinGameBtn" class="btn btn-secondary" disabled>
+                    <span>🔗</span> Rejoindre une Partie
+                </button>
+            </div>
+
+            <div id="debugInfo" class="debug-info"></div>
+        </div>
+    </div>
+
+    <!-- ÉCRAN PRÉSENTATEUR -->
+    <div id="presenterScreen" class="screen">
+        <header class="presenter-header">
+            <div class="header-left">
+                <button id="backBtn" class="btn-icon">←</button>
+                <h2>Présentateur</h2>
+            </div>
+            <div class="header-right">
+                <span id="playerCount" class="badge">0</span>
+            </div>
+        </header>
+
+        <div class="presenter-content">
+            <!-- Section Configuration -->
+            <div id="configSection" class="section">
+                <h3>Configuration de la Partie</h3>
+                
+                <div class="form-group">
+                    <label for="playerCountInput">Nombre de joueurs</label>
+                    <div class="number-input">
+                        <button id="decPlayersBtn">−</button>
+                        <span id="playerCountDisplay">0</span>
+                        <button id="incPlayersBtn">+</button>
+                    </div>
+                </div>
+
+                <div class="roles-config">
+                    <h4>Rôles disponibles</h4>
+                    <div id="rolesList" class="roles-grid"></div>
+                </div>
+
+                <button id="startGameBtn" class="btn btn-primary" disabled>
+                    Démarrer la Partie
+                </button>
+            </div>
+
+            <!-- Section Jeu -->
+            <div id="gameSection" class="section hidden">
+                <div class="game-status">
+                    <div class="status-card">
+                        <div class="status-label">Phase Actuelle</div>
+                        <div id="currentPhase" class="status-value">—</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Jour #</div>
+                        <div id="dayCount" class="status-value">1</div>
+                    </div>
+                </div>
+
+                <!-- Nuit -->
+                <div id="nightPanel" class="phase-panel hidden">
+                    <h3>Phase de Nuit</h3>
+                    <div id="nightActionsList" class="actions-list"></div>
+                    <div class="night-controls">
+                        <button id="previousActionBtn" class="btn btn-secondary" disabled>← Précédent</button>
+                        <button id="nextActionBtn" class="btn btn-primary">Suivant →</button>
+                    </div>
+                </div>
+
+                <!-- Jour -->
+                <div id="dayPanel" class="phase-panel hidden">
+                    <h3>Phase de Jour</h3>
+                    <div class="day-info">
+                        <p>Les joueurs discutent et votent pour éliminer quelqu'un...</p>
+                    </div>
+                    <button id="startVotingBtn" class="btn btn-primary">Lancer le Vote</button>
+                </div>
+
+                <!-- Votes -->
+                <div id="votingPanel" class="phase-panel hidden">
+                    <h3>Résultats des Votes</h3>
+                    <div id="votesDisplay" class="votes-display"></div>
+                    <div class="voting-controls">
+                        <button id="confirmVoteBtn" class="btn btn-primary">Valider l'Élimination</button>
+                        <button id="retryVoteBtn" class="btn btn-secondary">Nouveau Vote</button>
+                    </div>
+                </div>
+
+                <!-- Joueurs -->
+                <div id="playersPanel" class="section">
+                    <h3>État des Joueurs</h3>
+                    <div id="playersList" class="players-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÉCRAN JOUEUR -->
+    <div id="playerScreen" class="screen">
+        <header class="player-header">
+            <div class="header-left">
+                <h2 id="playerNameDisplay">Joueur</h2>
+            </div>
+            <div class="header-right">
+                <button id="disconnectBtn" class="btn-icon">⊗</button>
+            </div>
+        </header>
+
+        <div class="player-content">
+            <!-- Attente -->
+            <div id="waitingPanel" class="panel hidden">
+                <div class="waiting-message">
+                    <div class="spinner"></div>
+                    <p>En attente du démarrage...</p>
+                </div>
+            </div>
+
+            <!-- Info Rôle -->
+            <div id="rolePanel" class="panel hidden">
+                <div class="role-display">
+                    <div id="roleEmoji" class="role-emoji">?</div>
+                    <h2 id="roleName">Rôle</h2>
+                    <p id="roleDescription" class="role-description"></p>
+                </div>
+                <div id="roleInstructions" class="role-instructions"></div>
+                <button id="confirmRoleBtn" class="btn btn-primary">J'ai lu et compris</button>
+            </div>
+
+            <!-- Action Nocturne -->
+            <div id="nightActionPanel" class="panel hidden">
+                <h3>Action Nocturne</h3>
+                <p id="actionPrompt" class="action-prompt"></p>
+                <div id="actionTargets" class="targets-list"></div>
+                <button id="skipActionBtn" class="btn btn-secondary">Passer</button>
+            </div>
+
+            <!-- Vote -->
+            <div id="votingPanel" class="panel hidden">
+                <h3>Vote pour l'Élimination</h3>
+                <p class="voting-prompt">Qui voulez-vous éliminer ?</p>
+                <div id="votingTargets" class="targets-list"></div>
+                <button id="abstainBtn" class="btn btn-secondary">M'abstenir</button>
+            </div>
+
+            <!-- Résultat -->
+            <div id="resultPanel" class="panel hidden">
+                <div class="result-message">
+                    <div id="resultStatus" class="result-status">—</div>
+                    <p id="resultText"></p>
+                </div>
+                <button id="continueBtn" class="btn btn-primary">Continuer</button>
+            </div>
+
+            <!-- Éliminé -->
+            <div id="eliminatedPanel" class="panel hidden">
+                <div class="eliminated-message">
+                    <div class="message-icon">⚰️</div>
+                    <h3>Vous avez été éliminé</h3>
+                    <p>Vous pouvez suivre le jeu mais ne pouvez plus voter.</p>
+                </div>
+                <div id="spectatorInfo" class="spectator-info"></div>
+            </div>
+
+            <!-- Messages -->
+            <div id="messagePanel" class="panel hidden">
+                <div class="message-box">
+                    <p id="messageText"></p>
+                </div>
+                <button id="dismissMessageBtn" class="btn btn-secondary">Fermer</button>
+            </div>
+
+            <!-- État du Jeu -->
+            <div class="game-state-info">
+                <div class="state-row">
+                    <span>Statut:</span>
+                    <span id="playerGameStatus">—</span>
+                </div>
+                <div class="state-row">
+                    <span>Jour:</span>
+                    <span id="playerDayCount">—</span>
+                </div>
+                <div class="state-row">
+                    <span>Vos actions:</span>
+                    <span id="playerActions">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/roles.js"></script>
+    <script src="js/gameLogic.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(err => {
+                console.log('Service Worker registration failed:', err);
+            });
+        }
+    </script>
+</body>
+</html>

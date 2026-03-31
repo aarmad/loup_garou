@@ -1,12 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "echo 'Static site - no build needed'",
+  "outputDirectory": "public",
+  "cleanUrls": true,
   "public": true,
   "rewrites": [
-    {
-      "source": "/api/games(.*)",
-      "destination": "/api/games.js"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
