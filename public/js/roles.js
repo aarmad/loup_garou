@@ -174,23 +174,6 @@ const ROLES = {
         winCondition: 'wolves'
     },
 
-    pyromane: {
-        name: 'Pyromane',
-        emoji: '🔥',
-        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/e/e4/Pyromane1.webp/revision/latest/scale-to-width-down/180?cb=20250907104701&path-prefix=fr',
-        team: 'village',
-        description: 'Asperge deux personnes d\'essence la nuit - elles brûlent si elle meurt.',
-        instructions: [
-            'Vous êtes le Pyromane.',
-            'Chaque nuit, vous aspergez d\'essence deux personnes.',
-            'Si vous mourez la nuit, ces deux personnes brûlent et meurent aussi.',
-            'Jouez stratégiquement avec vos aspersions!'
-        ],
-        hasNightAction: true,
-        nightActionType: 'douse',
-        nightActionTarget: 'twoPlayers',
-        winCondition: 'wolves'
-    },
 
     ancien: {
         name: 'Ancien',
@@ -238,9 +221,9 @@ const ROLE_DISTRIBUTIONS = {
     5: ['loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
     6: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
     7: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon'],
-    8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'pyromane'],
+    8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard'],
     9: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'ancien'],
-    10: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'pyromane', 'renard'],
+    10: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien'],
 };
 
 /**
