@@ -34,7 +34,9 @@ export default function handler(req, res) {
         return;
     }
 
-    const { code } = req.query;
+    // Parse le code depuis l'URL (ex: /api/games/1234)
+    const urlParts = req.url.split('/').filter(Boolean);
+    const code = urlParts[2] || req.query.code;
 
     try {
         if (req.method === 'POST') {

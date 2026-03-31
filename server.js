@@ -235,7 +235,7 @@ function serveFile(res, filePath, contentType) {
 function handleRequest(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
@@ -249,6 +249,20 @@ function handleRequest(req, res) {
     // Routes API
     if (pathname === '/api/game/create' && req.method === 'POST') {
         return handleCreateGame(req, res);
+    }
+
+    // Route API /api/games - compatible Vercel
+    if (pathname === '/api/games' && req.method === 'POST') {
+        return handleCreateGame(req, res);
+    }
+
+    const gamesMatch = pathname.match(/^\/api\/games\/(.*)$/);
+    if (gamesMatch && req.method === 'GET') {
+        return handleGetGame(gamesMatch[1], res);
+    }
+
+    if (gamesMatch && req.method === 'PUT') {
+        return handleUpdateGame(gamesMatch[1], req, res);
     }
 
     const joinMatch = pathname.match(/^\/api\/game\/(.+)\/join$/);
@@ -297,12 +311,39 @@ function handleCreateGame(req, res) {
     req.on('end', () => {
         try {
             const data = JSON.parse(body);
-            const { gameId, playerId, joinCode } = gameManager.createGame(data.presenterName);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ gameId, playerId, joinCode }));
+            const { gameId, playerId, joinCode } = gameManager.createGame(data.host || data.presenterName || 'Présentateur');
+            
+            // Format compatible Vercel
+            const game = {
+                code: joinCode,
+                gameId: gameId,
+                presenterId: playerId,
+                host: data.host || data.presenterName,
+                players: [playerId],
+                state: 'lobby',
+                roles: data.roles || [],
+                currentPhase: 'day',
+                createdAt: Date.now()
+            };
+            
+            games.set(joinCode, game);
+            
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ 
+                success: true, 
+                code: joinCode,
+                game: game,
+                // Compatibilité ancienne API
+                gameId, 
+                playerId, 
+                joinCode 
+            }));
         } catch (err) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: err.message }));
+            res.end(JSON.stringify({ 
+                success: false,
+                error: err.message 
+            }));
         }
     });
 }
@@ -338,6 +379,52 @@ function handleGetPlayers(gameId, res) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
     }
+}
+
+/**
+ * GET /api/games/:code - Récupère l'état d'une partie
+ */
+function handleGetGame(code, res) {
+    try {
+        const game = games.get(code);
+        if (!game) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ success: false, error: 'Partie non trouvée' }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, game }));
+    } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+}
+
+/**
+ * PUT /api/games/:code - Met à jour l'état d'une partie
+ */
+function handleUpdateGame(code, req, res) {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+        try {
+            const game = games.get(code);
+            if (!game) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: false, error: 'Partie non trouvée' }));
+            }
+
+            const updates = JSON.parse(body);
+            Object.assign(game, updates);
+            games.set(code, game);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, game }));
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+    });
 }
 
 // ================================================================
