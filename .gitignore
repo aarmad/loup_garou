@@ -1,0 +1,44 @@
+# Dépendances
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Certificats SSL (générer avec npm run cert)
+cert/
+!cert/.gitkeep
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Builds et cache
+dist/
+build/
+.cache
+*.bundle.js
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Cache
+.eslintcache
+.stylelintcache
+
+# Tests
+coverage/
+.nyc_output
+
+# Fichiers temporaires
+tmp/
+temp/
+*.tmp

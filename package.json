@@ -1,0 +1,30 @@
+{
+  "name": "loup-garou-mobile",
+  "version": "1.0.0",
+  "description": "Jeu de Loup-Garou en présentiel avec synchronisation Bluetooth",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "cert": "openssl req -x509 -newkey rsa:2048 -nodes -out cert/cert.pem -keyout cert/key.pem -days 365 -subj '/C=FR/ST=Ile-de-France/L=Paris/O=Loup-Garou/CN=localhost'"
+  },
+  "keywords": [
+    "loup-garou",
+    "werewolf",
+    "jeu",
+    "bluetooth",
+    "pwa",
+    "mobile"
+  ],
+  "author": "Votre Nom",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/loup-garou.git"
+  },
+  "homepage": "https://github.com/username/loup-garou#readme"
+}
