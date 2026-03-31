@@ -308,6 +308,12 @@ body {
     font-weight: 700;
 }
 
+.room-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .room-badge {
     display: flex;
     align-items: center;
@@ -320,11 +326,16 @@ body {
     font-weight: 700;
 }
 
+.room-badge.players-badge {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
 .room-label {
     opacity: 0.9;
 }
 
-.room-number {
+.room-number,
+.player-count {
     font-family: 'Monaco', 'Courier New', monospace;
     font-weight: 700;
     font-size: 13px;

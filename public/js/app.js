@@ -331,7 +331,16 @@ function updateConnectedPlayers(gameState) {
     if (!gameState) return;
     
     AppState.connectedPlayers = gameState.players.filter(p => !p.isPresenter) || [];
-    document.getElementById('playerCount').textContent = gameState.players.length;
+    const playerCountElement = document.getElementById('playerCount');
+    const playerCountDisplayElement = document.getElementById('playerCountDisplay');
+    
+    const totalPlayers = gameState.players.length;
+    if (playerCountElement) {
+        playerCountElement.textContent = totalPlayers;
+    }
+    if (playerCountDisplayElement) {
+        playerCountDisplayElement.textContent = totalPlayers;
+    }
     
     updateStartButton();
 }

@@ -208,6 +208,187 @@ const ROLES = {
         nightActionType: 'sniff',
         nightActionTarget: 'singlePlayer',
         winCondition: 'wolves'
+    },
+
+    ankou: {
+        name: 'Ankou',
+        emoji: '💀',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/4/4f/Ankou.png/revision/latest?cb=20240616162226&path-prefix=fr',
+        team: 'solo',
+        description: 'Gagne en tant que dernier joueur vivant.',
+        instructions: [
+            'Vous êtes l\'Ankou, la mort elle-même.',
+            'Vous gagnez si vous êtes le dernier vivant debout.',
+            'Personne ne sait qui vous êtes.',
+            'Manipulez les deux équipes pour votre avantage!'
+        ],
+        hasNightAction: false,
+        winCondition: 'solo',
+        isAnte: false
+    },
+
+    chienloup: {
+        name: 'Chien-Loup',
+        emoji: '🐕‍🦺',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/b/b7/Images.jpg/revision/latest?cb=20210301212751&path-prefix=fr',
+        team: 'village',
+        description: 'Se range du côté de celui qui le vote.',
+        instructions: [
+            'Vous êtes le Chien-Loup.',
+            'Vous êtes loyal au villageois qui vous vote pour l\'élimination.',
+            'Si un loup vous vote, vous basculez du côté des loups.',
+            'Adaptez votre stratégie en fonction des votes!'
+        ],
+        hasNightAction: false,
+        specialAbility: 'sideChoosing',
+        winCondition: 'wolves'
+    },
+
+    corbeau: {
+        name: 'Corbeau',
+        emoji: '🐦',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/0/07/Carte17.png/revision/latest?cb=20240615183145&path-prefix=fr',
+        team: 'village',
+        description: 'Marque des joueurs chaque jour.',
+        instructions: [
+            'Vous êtes le Corbeau.',
+            'Chaque jour, vous marquez secrètement un joueur.',
+            'Si ce joueur est éliminé la nuit suivante, 2 joueurs supplémentaires meurent aussi.',
+            'Utilisez vos marques stratégiquement!'
+        ],
+        hasNightAction: false,
+        specialAbility: 'marking',
+        winCondition: 'wolves'
+    },
+
+    enfantsauvage: {
+        name: 'Enfant-Sauvage',
+        emoji: '👦',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/0/00/Carte16_%281%29.png/revision/latest?cb=20240616100838&path-prefix=fr',
+        team: 'village',
+        description: 'Choisit un modèle qu\'il suit.',
+        instructions: [
+            'Vous êtes l\'Enfant-Sauvage.',
+            'La première nuit, choisissez un modèle à suivre.',
+            'Si votre modèle meurt, vous devenez un loup!',
+            'Choisissez votre modèle sagement!'
+        ],
+        hasNightAction: true,
+        nightActionType: 'chooseModel',
+        nightActionTarget: 'singlePlayer',
+        activeFirstNightOnly: true,
+        winCondition: 'wolves'
+    },
+
+    grandmechantloup: {
+        name: 'Grand-Méchant-Loup',
+        emoji: '🐺‍🌙',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/4/48/Les-loups-garous-de--49-1347273071.jpg/revision/latest?cb=20210301214504&path-prefix=fr',
+        team: 'wolves',
+        description: 'Loup ultime qui peut tuer le Salvateur.',
+        instructions: [
+            'Vous êtes le Grand-Méchant-Loup.',
+            'Chaque nuit, vous et les loups tuez une victime.',
+            'Vous pouvez aussi ignorer la protection du Salvateur une fois.',
+            'Vous êtes leader - coordinateur des loups!'
+        ],
+        hasNightAction: true,
+        nightActionType: 'kill',
+        nightActionTarget: 'singlePlayer',
+        winCondition: 'village',
+        isWolf: true,
+        bypassProtection: 1
+    },
+
+    jugebegue: {
+        name: 'Juge Bègue',
+        emoji: '⚖️',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/d/d8/Carte29.png/revision/latest?cb=20240616110633&path-prefix=fr',
+        team: 'village',
+        description: 'Son vote compte double.',
+        instructions: [
+            'Vous êtes le Juge Bègue.',
+            'Pendant les votes, votre vote compte pour 2!',
+            'Utilisez ce pouvoir pour éliminer rapidement les loups.',
+            'Gardez votre secret pour rester vivant!'
+        ],
+        hasNightAction: false,
+        specialAbility: 'doubleVote',
+        winCondition: 'wolves'
+    },
+
+    loupvoyant: {
+        name: 'Loup-Garou Voyant',
+        emoji: '🐺🔮',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/c/ca/LoupVoyant.jpg/revision/latest?cb=20240616194413&path-prefix=fr',
+        team: 'wolves',
+        description: 'Loup qui peut voir les rôles comme la Voyante.',
+        instructions: [
+            'Vous êtes un Loup-Garou Voyant.',
+            'Chaque nuit, vous pouvez voir le rôle d\'un villageois.',
+            'Vous tuez aussi avec vos compères loups.',
+            'Vous possédez les pouvoirs du loup ET de la voyante!'
+        ],
+        hasNightAction: true,
+        nightActionType: 'info',
+        nightActionTarget: 'singlePlayer',
+        winCondition: 'village',
+        isWolf: true
+    },
+
+    marionnettiste: {
+        name: 'Marionnettiste',
+        emoji: '🎭',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/b/b4/Marionnettiste.png/revision/latest?cb=20240616163645&path-prefix=fr',
+        team: 'solo',
+        description: 'Contrôle un villageois pour le faire voter.',
+        instructions: [
+            'Vous êtes le Marionnettiste.',
+            'Chaque jour, vous contrôlez un villageois.',
+            'Cette marionnette vote comme vous le souhaitez.',
+            'Gagnez en manipulant le vote pendant 3 jours!'
+        ],
+        hasNightAction: true,
+        nightActionType: 'control',
+        nightActionTarget: 'singlePlayer',
+        winCondition: 'solo',
+        isAnte: false
+    },
+
+    necromancien: {
+        name: 'Nécromancien',
+        emoji: '💀🔮',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/4/4f/Carte10.png/revision/latest?cb=20240616164208&path-prefix=fr',
+        team: 'solo',
+        description: 'Gagne en ressuscitant les morts.',
+        instructions: [
+            'Vous êtes le Nécromancien.',
+            'Chaque nuit, vous pouvez ressusciter un mort.',
+            'Gagnez si vous avez ressuscité 3 personnes.',
+            'Manipulez les vivants pour protéger les morts!'
+        ],
+        hasNightAction: true,
+        nightActionType: 'resurrect',
+        nightActionTarget: 'deadPlayer',
+        winCondition: 'solo',
+        isAnte: false
+    },
+
+    noctambule: {
+        name: 'Noctambule',
+        emoji: '🌙',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/6/68/Carte33.jpeg/revision/latest?cb=20240617080139&path-prefix=fr',
+        team: 'village',
+        description: 'Gagne si éliminé le jour, mais reste la nuit.',
+        instructions: [
+            'Vous êtes le Noctambule.',
+            'Si vous êtes éliminé un jour, vous gagnez!',
+            'Cependant, vous revenez la nuit suivante comme fantôme.',
+            'Influencez le jeu depuis l\'au-delà!'
+        ],
+        hasNightAction: false,
+        specialAbility: 'nightRevenge',
+        winCondition: 'wolves'
     }
 };
 
@@ -224,6 +405,16 @@ const ROLE_DISTRIBUTIONS = {
     8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard'],
     9: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'ancien'],
     10: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien'],
+    11: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau'],
+    12: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau'],
+    13: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue'],
+    14: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage'],
+    15: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage'],
+    16: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'grandmechantloup', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage'],
+    17: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'grandmechantloup', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage', 'loupvoyant'],
+    18: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'grandmechantloup', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage', 'loupvoyant', 'chienloup'],
+    19: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'grandmechantloup', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage', 'loupvoyant', 'chienloup', 'noctambule'],
+    20: ['loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'loupgarou', 'grandmechantloup', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard', 'ancien', 'corbeau', 'jugebegue', 'enfantsauvage', 'loupvoyant', 'chienloup', 'noctambule', 'ankou'],
 };
 
 /**
