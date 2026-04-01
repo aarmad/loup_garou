@@ -137,7 +137,8 @@ class NetworkManager {
 
         try {
             // Utilisation du format /api/games/CODE pour Vercel (plus propre avec [code].js)
-            const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
+            // Ajout d'un paramètre de cache-busting pour forcer Vercel à rafraîchir les données
+            const url = `${API_BASE}/${encodeURIComponent(this.gameId)}?_t=${Date.now()}`;
             console.log('[NetworkManager] refreshGameState GET', url);
             const resp = await fetch(url);
             if (!resp.ok) {
