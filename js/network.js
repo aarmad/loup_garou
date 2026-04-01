@@ -1,8 +1,12 @@
 /**
- * LOUP-GAROU - GESTION RÉSEAU SIMPLE (localStorage)
- * Version Vercel: synchronisation stateless via localStorage uniquement
- * Chaque client gère son état local, le présentateur orchestre
+ * LOUP-GAROU - GESTION RÉSEAU via API interne Vercel
+ *  - POST /api/games         : création de partie
+ *  - GET /api/games/:code    : lecture état partie
+ *  - PUT /api/games/:code    : mise à jour état partie
+ *  (fallback localStorage pour dev/offline)
  */
+
+const API_BASE = '/api/games';
 
 class NetworkManager {
     constructor() {
@@ -14,197 +18,174 @@ class NetworkManager {
         this.listeners = [];
         this.gameState = null;
         this.pollInterval = null;
-        
-        // Polling rapide pour détecter les changements
-        this.POLL_INTERVAL = 500; // 500ms pour détection rapide
+        this.POLL_INTERVAL = 800;
     }
 
-    /**
-     * Créer une nouvelle partie (Présentateur)
-     */
     async createGame(playerName) {
-        try {
-            this.playerName = playerName;
-            // Utiliser un timestamp comme gameId simple
-            this.gameId = Date.now().toString();
-            this.playerId = `presenter-${this.gameId}`;
-            this.isPresenter = true;
-            this.isConnected = true;
+        this.playerName = playerName;
+        this.playerId = `presenter-${Date.now()}`;
+        this.isPresenter = true;
 
-            // État initial de la partie
-            this.gameState = {
-                code: this.gameId,
-                host: playerName,
-                presenterId: this.playerId,
-                players: [
-                    {
-                        playerId: this.playerId,
-                        name: playerName,
-                        isAlive: true,
-                        role: null,
-                        isPresenter: true
-                    }
-                ],
-                state: 'lobby', // lobby, setup, day, night, ended
-                roles: [],
-                currentPhase: 'day',
-                nightPhase: null, // 'setup', 'actions', 'results'
-                currentNight: 0,
-                votes: {},
-                eliminated: [],
-                messages: [],
-                roleActions: {}, // {playerId: {action: 'kill', target: playerId}}
-                createdAt: Date.now()
-            };
+        const payload = {
+            host: playerName,
+            players: [{ playerId: this.playerId, name: playerName, isAlive: true, role: null, isPresenter: true }],
+            roles: [],
+            state: 'lobby',
+            currentPhase: 'lobby',
+            nightPhase: null,
+            currentNight: 0,
+            votes: {},
+            eliminated: [],
+            messages: []
+        };
 
-            // Sauvegarder dans localStorage
-            localStorage.setItem('gameId', this.gameId);
-            localStorage.setItem('playerId', this.playerId);
-            localStorage.setItem('isPresenter', 'true');
-            localStorage.setItem(`game_${this.gameId}`, JSON.stringify(this.gameState));
+        console.log('[NetworkManager] createGame payload', payload);
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-            // Démarrer la synchronisation locale
-            this.startPolling();
-
-            return {
-                gameId: this.gameId,
-                joinCode: this.gameId,
-                playerId: this.playerId
-            };
-        } catch (err) {
-            console.error('❌ Erreur création partie:', err);
-            throw err;
+        if (!response.ok) {
+            const err = await response.text();
+            console.error('[NetworkManager] createGame API erreur', response.status, err);
+            throw new Error(`Impossible de créer la partie: ${err}`);
         }
+
+        const json = await response.json();
+        this.gameId = json.code;
+        this.gameState = json.game;
+        this.isConnected = true;
+
+        localStorage.setItem('gameId', this.gameId);
+        localStorage.setItem('playerId', this.playerId);
+        localStorage.setItem('isPresenter', 'true');
+        this._saveLocalState();
+
+        this.startPolling();
+
+        return { gameId: this.gameId, joinCode: this.gameId, playerId: this.playerId };
     }
 
-    /**
-     * Rejoindre une partie existante
-     */
     async joinGame(gameId, playerName) {
-        try {
-            this.playerName = playerName;
-            this.gameId = gameId;
-            this.playerId = `player-${Math.random().toString(36).substr(2, 9)}`;
-            this.isPresenter = false;
-
-            // Récupérer l'état de la partie depuis localStorage
-            const gameData = localStorage.getItem(`game_${gameId}`);
-            if (!gameData) {
-                throw new Error('Partie non trouvée');
-            }
-
-            this.gameState = JSON.parse(gameData);
-
-            // Ajouter le joueur à la liste
-            if (!this.gameState.players.find(p => p.playerId === this.playerId)) {
-                this.gameState.players.push({
-                    playerId: this.playerId,
-                    name: playerName,
-                    isAlive: true,
-                    role: null,
-                    isPresenter: false
-                });
-
-                // Sauvegarder les changements
-                localStorage.setItem(`game_${gameId}`, JSON.stringify(this.gameState));
-            }
-
-            // Sauvegarder localement
-            localStorage.setItem('gameId', gameId);
-            localStorage.setItem('playerId', this.playerId);
-            localStorage.setItem('isPresenter', 'false');
-
-            this.isConnected = true;
-
-            // Démarrer la synchronisation locale
-            this.startPolling();
-
-            return {
-                gameId: gameId,
-                playerId: this.playerId
-            };
-        } catch (err) {
-            console.error('❌ Erreur rejoindre partie:', err);
-            throw err;
+        this.playerName = playerName;
+        gameId = (gameId || '').toString().trim();
+        if (!gameId) {
+            throw new Error('Code de salle invalide');
         }
+
+        this.gameId = gameId;
+        this.playerId = `player-${Math.random().toString(36).substr(2, 9)}`;
+        this.isPresenter = false;
+
+        let gameState = await this.refreshGameState();
+        if (!gameState) {
+            const fallback = localStorage.getItem(`game_${gameId}`);
+            if (fallback) {
+                gameState = JSON.parse(fallback);
+            }
+        }
+
+        if (!gameState) {
+            throw new Error('Partie non trouvée');
+        }
+
+        this.gameState = gameState;
+
+        if (!this.gameState.players.find(p => p.playerId === this.playerId)) {
+            this.gameState.players.push({
+                playerId: this.playerId,
+                name: playerName,
+                isAlive: true,
+                role: null,
+                isPresenter: false
+            });
+            await this._saveRemoteState();
+        }
+
+        this.isConnected = true;
+
+        localStorage.setItem('gameId', gameId);
+        localStorage.setItem('playerId', this.playerId);
+        localStorage.setItem('isPresenter', 'false');
+        this._saveLocalState();
+
+        this.startPolling();
+
+        return { gameId, playerId: this.playerId };
     }
 
-    /**
-     * Récupérer l'état actuel de la partie
-     */
     getGameState() {
+        if (this.gameState) return this.gameState;
+        const local = this._loadLocalState();
+        return local || null;
+    }
+
+    async refreshGameState() {
         if (!this.gameId) return null;
 
-        // Recharger depuis localStorage en cas de changement
-        const stored = localStorage.getItem(`game_${this.gameId}`);
-        if (stored) {
-            this.gameState = JSON.parse(stored);
-        }
+        try {
+            console.log('[NetworkManager] refreshGameState GET', `${API_BASE}/${this.gameId}`);
+        const resp = await fetch(`${API_BASE}/${this.gameId}`);
+            if (!resp.ok) {
+                console.error('[NetworkManager] refreshGameState status', resp.status);
+                if (resp.status === 404) return null;
+                throw new Error('Erreur API rafraîchissement');
+            }
 
-        return this.gameState;
+            const json = await resp.json();
+            console.log('[NetworkManager] refreshGameState result', json);
+            if (!json.success) return null;
+
+            this.gameState = json.game;
+            this._saveLocalState();
+            this.notifyListeners('GAME_STATE_CHANGED', this.gameState);
+            return this.gameState;
+        } catch (err) {
+            console.error('refreshGameState error', err);
+            return this._loadLocalState();
+        }
     }
 
-    /**
-     * Mettre à jour l'état de la partie (Présentateur mainly)
-     */
-    updateGameState(updates) {
-        if (!this.gameId || !this.isPresenter) {
-            console.warn('⚠️ Seul le présentateur peut mettre à jour l\'état');
-            return false;
-        }
+    async updateGameState(updates) {
+        if (!this.gameId) return false;
 
-        // Récupérer l'état frais
-        const current = this.getGameState();
+        const current = await this.refreshGameState();
         if (!current) return false;
 
-        // Fusionner les mises à jour
-        const updated = { ...current, ...updates };
-
-        // Sauvegarder
-        localStorage.setItem(`game_${this.gameId}`, JSON.stringify(updated));
-        this.gameState = updated;
-
-        // Notifier les listeners
-        this.notifyListeners('GAME_STATE_UPDATED', updated);
-
+        this.gameState = { ...current, ...updates };
+        this._saveLocalState();
+        await this._saveRemoteState();
+        this.notifyListeners('GAME_STATE_UPDATED', this.gameState);
         return true;
     }
 
-    /**
-     * Soumettre un vote
-     */
-    submitVote(targetPlayerId) {
+    async submitVote(targetPlayerId) {
         if (!this.gameId) return false;
-
-        const current = this.getGameState();
+        const current = await this.refreshGameState();
         if (!current) return false;
 
-        // Enregistrer le vote
+        current.votes = current.votes || {};
         current.votes[this.playerId] = {
             voter: this.playerId,
             target: targetPlayerId,
             timestamp: Date.now()
         };
 
-        localStorage.setItem(`game_${this.gameId}`, JSON.stringify(current));
-        this.notifyListeners('VOTE_SUBMITTED', {
-            voter: this.playerId,
-            target: targetPlayerId
-        });
+        this.gameState = current;
+        this._saveLocalState();
+        await this._saveRemoteState();
 
+        this.notifyListeners('VOTE_SUBMITTED', { voter: this.playerId, target: targetPlayerId });
         return true;
     }
 
-    /**
-     * Soumettre une action nocturne
-     */
-    submitNightAction(action, targetPlayerId = null) {
+    async submitNightAction(action, targetPlayerId = null) {
         if (!this.gameId) return false;
-
-        const current = this.getGameState();
+        const current = await this.refreshGameState();
         if (!current) return false;
 
-        // Enregistrer l'action
+        current.roleActions = current.roleActions || {};
         current.roleActions[this.playerId] = {
             player: this.playerId,
             action: action,
@@ -212,336 +193,80 @@ class NetworkManager {
             timestamp: Date.now()
         };
 
-        localStorage.setItem(`game_${this.gameId}`, JSON.stringify(current));
-        this.notifyListeners('ROLE_ACTION_SUBMITTED', {
-            player: this.playerId,
-            action: action,
-            target: targetPlayerId
-        });
+        this.gameState = current;
+        this._saveLocalState();
+        await this._saveRemoteState();
 
+        this.notifyListeners('ROLE_ACTION_SUBMITTED', { player: this.playerId, action: action, target: targetPlayerId });
         return true;
     }
 
-    /**
-     * Listener pour surveiller les changements
-     */
     addEventListener(callback) {
-        this.listeners.push(callback);
+        if (typeof callback === 'function') this.listeners.push(callback);
     }
 
     notifyListeners(type, data) {
         this.listeners.forEach(cb => {
-            try {
-                cb({ type, data });
-            } catch (err) {
-                console.error('Erreur listener:', err);
-            }
+            try { cb({ type, data }); } catch (err) { console.error('Erreur listener:', err); }
         });
     }
 
-    /**
-     * Polling local pour détecter les changements
-     */
     startPolling() {
-        let lastState = JSON.stringify(this.gameState);
+        if (this.pollInterval) clearInterval(this.pollInterval);
 
-        this.pollInterval = setInterval(() => {
-            if (!this.gameId) return;
-
-            const current = localStorage.getItem(`game_${this.gameId}`);
-            if (current && current !== lastState) {
-                lastState = current;
-                this.gameState = JSON.parse(current);
-
-                // Notifier du changement
-                this.notifyListeners('GAME_STATE_CHANGED', this.gameState);
-            }
+        this.pollInterval = setInterval(async () => {
+            await this.refreshGameState();
         }, this.POLL_INTERVAL);
     }
 
-    /**
-     * Arrêter la synchronisation
-     */
     disconnect() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
-        }
-
-        // Nettoyer le localStorage
+        if (this.pollInterval) clearInterval(this.pollInterval);
+        this.pollInterval = null;
         localStorage.removeItem('gameId');
         localStorage.removeItem('playerId');
         localStorage.removeItem('isPresenter');
+        if (this.gameId) localStorage.removeItem(`game_${this.gameId}`);
 
         this.isConnected = false;
         this.gameId = null;
         this.playerId = null;
+        this.isPresenter = false;
+        this.gameState = null;
+    }
+
+    async _saveRemoteState() {
+        if (!this.gameId) return null;
+
+        const resp = await fetch(`${API_BASE}/${this.gameId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.gameState)
+        });
+
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(`Impossible de sauvegarder la partie: ${txt}`);
+        }
+
+        const json = await resp.json();
+        return json.game;
+    }
+
+    _saveLocalState() {
+        if (!this.gameId || !this.gameState) return;
+        localStorage.setItem(`game_${this.gameId}`, JSON.stringify(this.gameState));
+    }
+
+    _loadLocalState() {
+        if (!this.gameId) return null;
+        const raw = localStorage.getItem(`game_${this.gameId}`);
+        if (!raw) return null;
+        try {
+            return JSON.parse(raw);
+        } catch (err) {
+            return null;
+        }
     }
 }
 
-// Export
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = NetworkManager;
-}
-
-            // Vérifier que la partie existe
-            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${gameId}`);
-            
-            if (!response.ok) throw new Error('Partie non trouvée');
-
-            const data = await response.json();
-            if (!data.success) throw new Error(data.error || 'Partie non trouvée');
-
-            this.playerId = `player-${Date.now()}`;
-            this.isPresenter = false;
-            this.isConnected = true;
-
-            // Sauvegarder localement
-            localStorage.setItem('gameId', this.gameId);
-            localStorage.setItem('playerId', this.playerId);
-            localStorage.setItem('isPresenter', 'false');
-            localStorage.setItem('playerName', playerName);
-
-            // Démarrer la synchronisation
-            this.startSync();
-
-            return {
-                gameId: this.gameId,
-                playerId: this.playerId,
-                players: data.game.players || []
-            };
-        } catch (err) {
-            console.error('Erreur connexion partie:', err);
-            throw err;
-        }
-    }
-
-    /**
-     * Démarrer la synchronisation avec l'API
-     */
-    startSync() {
-        if (!this.syncInterval) {
-            // Synchroniser toutes les 2 secondes
-            this.syncInterval = setInterval(() => {
-                this.syncGameState();
-            }, 2000);
-        }
-    }
-
-    /**
-     * Synchronise l'état de la partie
-     */
-    async syncGameState() {
-        if (!this.gameId) return;
-
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${this.gameId}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.success) {
-                    const game = data.game;
-                    
-                    // Comparer avec l'état local
-                    if (JSON.stringify(game) !== JSON.stringify(this.gameState)) {
-                        this.gameState = game;
-                        this.notifyListeners({
-                            type: 'STATE_UPDATE',
-                            gameState: game
-                        });
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn('Erreur synchronisation:', error);
-        }
-    }
-
-    /**
-     * Se connecter au WebSocket de la partie
-     */
-    connectToGame() {
-        return Promise.resolve(); // Pas besoin de WebSocket avec l'API HTTP
-    }
-
-    /**
-     * Se reconnecter après déconnexion
-     */
-    async reconnect() {
-        if (!this.isConnected && this.gameId && this.playerId) {
-            this.isConnected = true;
-            this.startSync();
-        }
-    }
-
-    /**
-     * Traiter un message reçu
-     */
-    handleMessage(message) {
-        console.log('📨 Message:', message.type);
-
-        // Mettre à jour l'état local
-        if (message.gameState) {
-            this.gameState = message.gameState;
-        }
-
-        // Notifier les listeners
-        this.notifyListeners(message);
-    }
-
-    /**
-     * S'abonner aux événements réseau
-     */
-    onMessage(callback) {
-        this.listeners.push(callback);
-    }
-
-    /**
-     * Notifier les listeners
-     */
-    notifyListeners(message) {
-        this.listeners.forEach(cb => {
-            try {
-                cb(message);
-            } catch (err) {
-                console.error('Erreur listener:', err);
-            }
-        });
-    }
-
-    /**
-     * Envoyer une action au serveur (mise à jour API)
-     */
-    async sendMessage(message) {
-        if (!message.gameId) message.gameId = this.gameId;
-        if (!message.playerId) message.playerId = this.playerId;
-
-        try {
-            const updates = {
-                type: message.type,
-                playerId: message.playerId,
-                ...message
-            };
-
-            const response = await fetch(`${this.apiBaseUrl}/api/games?code=${this.gameId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.gameState = data.game;
-                this.notifyListeners({
-                    type: 'STATE_UPDATE',
-                    gameState: data.game
-                });
-            }
-        } catch (err) {
-            console.error('Erreur envoi message:', err);
-            if (!this.isProcessing) {
-                this.messageQueue.push(message);
-            }
-        }
-    }
-
-    /**
-     * Traiter la file d'attente des messages
-     */
-    async processMessageQueue() {
-        while (this.messageQueue.length > 0 && !this.isProcessing) {
-            this.isProcessing = true;
-            const message = this.messageQueue.shift();
-            await this.sendMessage(message);
-            this.isProcessing = false;
-        }
-    }
-
-    /**
-     * Démarrer la partie (Présentateur uniquement)
-     */
-    async startGame(roles) {
-        return this.sendMessage({
-            type: 'GAME_START',
-            roles: roles,
-            state: 'playing'
-        });
-    }
-
-    /**
-     * Soumettre une action nocturne
-     */
-    async submitNightAction(action) {
-        return this.sendMessage({
-            type: 'NIGHT_ACTION',
-            action: action
-        });
-    }
-
-    /**
-     * Voter pour éliminer quelqu'un
-     */
-    async submitVote(targetPlayerId) {
-        return this.sendMessage({
-            type: 'VOTE',
-            targetPlayerId: targetPlayerId
-        });
-    }
-
-    /**
-     * Passer à la phase suivante (Présentateur)
-     */
-    async nextPhase() {
-        return this.sendMessage({
-            type: 'NEXT_PHASE'
-        });
-    }
-
-    /**
-     * Éliminer un joueur (Présentateur)
-     */
-    async eliminatePlayer(playerId) {
-        return this.sendMessage({
-            type: 'ELIMINATE_PLAYER',
-            playerId: playerId
-        });
-    }
-
-    /**
-     * Obtenir la liste des joueurs
-     */
-    async getPlayers() {
-        try {
-            if (this.gameState) {
-                return this.gameState.players || [];
-            }
-            return [];
-        } catch (err) {
-            console.error('Erreur récupération joueurs:', err);
-            return [];
-        }
-    }
-
-    /**
-     * Se déconnecter
-     */
-    disconnect() {
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-            this.syncInterval = null;
-        }
-        this.isConnected = false;
-        this.gameId = null;
-        this.playerId = null;
-        
-        // Effacer le localStorage
-        localStorage.removeItem('gameId');
-        localStorage.removeItem('playerId');
-        localStorage.removeItem('isPresenter');
-        localStorage.removeItem('playerName');
-    }
-}
-
-// Exporter le gestionnaire
 const networkManager = new NetworkManager();
