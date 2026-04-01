@@ -109,8 +109,14 @@ export default async function handler(req, res) {
                 });
             }
 
+            // Nettoyer les champs immuables comme _id
+            const updates = { ...(body || {}) };
+            if (updates._id) {
+                delete updates._id;
+            }
+
             // Mettre à jour dans MongoDB
-            await updateGame(code, req.body);
+            await updateGame(code, updates);
             
             // Récupérer la version mise à jour
             const updatedGame = await getGame(code);
