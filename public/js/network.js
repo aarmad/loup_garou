@@ -3,7 +3,6 @@
  *  - POST /api/games         : création de partie
  *  - GET /api/games/:code    : lecture état partie
  *  - PUT /api/games/:code    : mise à jour état partie
- *  (fallback localStorage pour dev/offline)
  */
 
 const API_BASE = '/api/games';
@@ -39,6 +38,7 @@ class NetworkManager {
             messages: []
         };
 
+        console.log('[NetworkManager] createGame payload', payload);
         const response = await fetch(API_BASE, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -47,6 +47,7 @@ class NetworkManager {
 
         if (!response.ok) {
             const err = await response.text();
+            console.error('[NetworkManager] createGame API erreur', response.status, err);
             throw new Error(`Impossible de créer la partie: ${err}`);
         }
 
@@ -67,18 +68,30 @@ class NetworkManager {
 
     async joinGame(gameId, playerName) {
         this.playerName = playerName;
+        gameId = (gameId || '').toString().trim();
+        if (!gameId) {
+            throw new Error('Code de salle invalide');
+        }
+
         this.gameId = gameId;
         this.playerId = `player-${Math.random().toString(36).substr(2, 9)}`;
         this.isPresenter = false;
 
-        const gameState = await this.refreshGameState();
+        let gameState = await this.refreshGameState();
+        if (!gameState) {
+            const fallback = localStorage.getItem(`game_${gameId}`);
+            if (fallback) {
+                gameState = JSON.parse(fallback);
+            }
+        }
+
         if (!gameState) {
             throw new Error('Partie non trouvée');
         }
 
         this.gameState = gameState;
 
-        // Normaliser players qui pourraient être stockés comme des chaînes (ancienne implémentation)
+        // Normaliser players
         if (Array.isArray(this.gameState.players)) {
             this.gameState.players = this.gameState.players.map(p => {
                 if (typeof p === 'string') {
@@ -123,14 +136,18 @@ class NetworkManager {
         if (!this.gameId) return null;
 
         try {
+            // Utilisation du format /api/games/CODE pour Vercel (plus propre avec [code].js)
             const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
+            console.log('[NetworkManager] refreshGameState GET', url);
             const resp = await fetch(url);
             if (!resp.ok) {
+                console.error('[NetworkManager] refreshGameState status', resp.status);
                 if (resp.status === 404) return null;
                 throw new Error('Erreur API rafraîchissement');
             }
 
             const json = await resp.json();
+            console.log('[NetworkManager] refreshGameState result', json);
             if (!json.success) return null;
 
             this.gameState = json.game;

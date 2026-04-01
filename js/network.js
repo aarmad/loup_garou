@@ -3,7 +3,6 @@
  *  - POST /api/games         : création de partie
  *  - GET /api/games/:code    : lecture état partie
  *  - PUT /api/games/:code    : mise à jour état partie
- *  (fallback localStorage pour dev/offline)
  */
 
 const API_BASE = '/api/games';
@@ -92,7 +91,7 @@ class NetworkManager {
 
         this.gameState = gameState;
 
-        // Normaliser players qui pourraient être stockés comme des chaînes (ancienne implémentation)
+        // Normaliser players
         if (Array.isArray(this.gameState.players)) {
             this.gameState.players = this.gameState.players.map(p => {
                 if (typeof p === 'string') {
@@ -137,7 +136,8 @@ class NetworkManager {
         if (!this.gameId) return null;
 
         try {
-            const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+            // Utilisation du format /api/games/CODE pour Vercel (plus propre avec [code].js)
+            const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
             console.log('[NetworkManager] refreshGameState GET', url);
             const resp = await fetch(url);
             if (!resp.ok) {
@@ -250,7 +250,7 @@ class NetworkManager {
     async _saveRemoteState() {
         if (!this.gameId) return null;
 
-        const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+        const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
         const resp = await fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

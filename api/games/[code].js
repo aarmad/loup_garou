@@ -11,9 +11,23 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Parser le code depuis req.query
   const { code } = req.query;
   if (!code || typeof code !== 'string') {
     return res.status(400).json({ success: false, error: 'Code de partie invalide' });
+  }
+
+  // Parser le body JSON si nécessaire (fallback robuste pour Vercel)
+  let body = req.body;
+  if ((!body || Object.keys(body).length === 0) && (req.method === 'POST' || req.method === 'PUT')) {
+      try {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const raw = Buffer.concat(chunks).toString('utf8');
+          body = raw ? JSON.parse(raw) : {};
+      } catch (err) {
+          body = {};
+      }
   }
 
   try {
@@ -31,7 +45,13 @@ export default async function handler(req, res) {
         return res.status(404).json({ success: false, error: 'Partie non trouvée' });
       }
 
-      await updateGame(code, req.body);
+      // Nettoyer les champs immuables comme _id
+      const updates = { ...(body || {}) };
+      if (updates._id) {
+        delete updates._id;
+      }
+
+      await updateGame(code, updates);
       const updatedGame = await getGame(code);
       return res.status(200).json({ success: true, game: updatedGame });
     }
