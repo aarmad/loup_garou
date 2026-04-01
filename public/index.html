@@ -38,7 +38,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2v20M7 7l10 10M7 17l10-10"/>
                 </svg>
-                <span>Prêt à jouer</span>
+                <span id="networkStatusText">Connecté au serveur</span>
             </div>
 
             <div class="button-group">
@@ -102,6 +102,10 @@
                 <div class="room-badge players-badge">
                     <span class="room-label">Joueurs</span>
                     <span id="playerCount" class="player-count">0</span>
+                </div>
+                <div class="room-badge players-badge">
+                    <span class="room-label">Connectés</span>
+                    <span id="connectedPlayersCount" class="player-count">0</span>
                 </div>
             </div>
         </div>

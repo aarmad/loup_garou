@@ -62,6 +62,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Ignorer les requêtes issues des extensions (chrome-extension://)
+    if (event.request.url.startsWith('chrome-extension://')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {

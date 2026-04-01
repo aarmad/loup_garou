@@ -67,14 +67,22 @@ function initializeApp() {
  * Mettre à jour le statut réseau
  */
 function updateNetworkStatus() {
-    const statusElement = document.getElementById('bluetoothStatus');
+    setConnectionStatus('Connecté au serveur', true);
     const createBtn = document.getElementById('createGameBtn');
     const joinBtn = document.getElementById('joinGameBtn');
 
-    statusElement.innerHTML = '<span class="status-icon">✅</span> <span>Connecté au serveur</span>';
-    statusElement.classList.add('available');
     createBtn.disabled = false;
     joinBtn.disabled = false;
+}
+
+function setConnectionStatus(text, online) {
+    const statusElement = document.getElementById('bluetoothStatus');
+    const statusText = document.getElementById('networkStatusText');
+    if (!statusElement || !statusText) return;
+
+    statusText.textContent = text;
+    statusElement.classList.remove('success', 'warning', 'error');
+    statusElement.classList.add(online ? 'success' : 'error');
 }
 
 /**
@@ -472,14 +480,14 @@ function updateConnectedPlayers(gameState) {
     
     AppState.connectedPlayers = gameState.players.filter(p => !p.isPresenter) || [];
     const playerCountElement = document.getElementById('playerCount');
-    const playerCountDisplayElement = document.getElementById('playerCountDisplay');
+    const connectedCountElement = document.getElementById('connectedPlayersCount');
     
     const totalPlayers = gameState.players.length;
     if (playerCountElement) {
         playerCountElement.textContent = totalPlayers;
     }
-    if (playerCountDisplayElement) {
-        playerCountDisplayElement.textContent = totalPlayers;
+    if (connectedCountElement) {
+        connectedCountElement.textContent = totalPlayers;
     }
     
     updateStartButton();
@@ -726,10 +734,6 @@ function retryVote() {
  * Retour au lobby
  */
 function backToLobby() {
-    if (AppState.gameStarted) {
-        if (!confirm('Êtes-vous sûr? Cela fermera la partie.')) return;
-    }
-
     AppState.isPresenter = false;
     AppState.gameStarted = false;
     AppState.connectedPlayers = [];
@@ -991,10 +995,9 @@ function dismissMessage() {
  * Déconnecter
  */
 function disconnect() {
-    if (confirm('Êtes-vous sûr de vouloir quitter?')) {
-        AppState.networkManager.disconnect();
-        backToLobby();
-    }
+    AppState.networkManager.disconnect();
+    setConnectionStatus('Déconnecté', false);
+    backToLobby();
 }
 
 // ============================================
@@ -1005,7 +1008,14 @@ function disconnect() {
  * Afficher un message
  */
 function showMessage(text) {
-    alert(text); // À remplacer par une notification élégante
+    const messagePanel = document.getElementById('messagePanel');
+    const messageText = document.getElementById('messageText');
+    if (messagePanel && messageText) {
+        messageText.textContent = text;
+        messagePanel.classList.add('active');
+        return;
+    }
+    console.warn('showMessage:', text);
 }
 
 /**
