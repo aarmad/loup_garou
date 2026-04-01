@@ -125,8 +125,9 @@ class NetworkManager {
         if (!this.gameId) return null;
 
         try {
-            console.log('[NetworkManager] refreshGameState GET', `${API_BASE}/${this.gameId}`);
-        const resp = await fetch(`${API_BASE}/${this.gameId}`);
+            const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+            console.log('[NetworkManager] refreshGameState GET', url);
+            const resp = await fetch(url);
             if (!resp.ok) {
                 console.error('[NetworkManager] refreshGameState status', resp.status);
                 if (resp.status === 404) return null;
@@ -237,7 +238,8 @@ class NetworkManager {
     async _saveRemoteState() {
         if (!this.gameId) return null;
 
-        const resp = await fetch(`${API_BASE}/${this.gameId}`, {
+        const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+        const resp = await fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.gameState)

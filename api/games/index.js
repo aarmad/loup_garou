@@ -3,7 +3,7 @@
  * Synchronisation avec MongoDB Atlas
  */
 
-import { getGame, createGame, updateGame } from '../lib/mongodb.js';
+import { getGame, createGame, updateGame } from '../../lib/mongodb.js';
 
 /**
  * Génère un code unique de 4 chiffres

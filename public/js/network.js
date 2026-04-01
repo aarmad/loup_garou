@@ -111,7 +111,8 @@ class NetworkManager {
         if (!this.gameId) return null;
 
         try {
-            const resp = await fetch(`${API_BASE}/${this.gameId}`);
+            const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+            const resp = await fetch(url);
             if (!resp.ok) {
                 if (resp.status === 404) return null;
                 throw new Error('Erreur API rafraîchissement');
@@ -220,7 +221,8 @@ class NetworkManager {
     async _saveRemoteState() {
         if (!this.gameId) return null;
 
-        const resp = await fetch(`${API_BASE}/${this.gameId}`, {
+        const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+        const resp = await fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.gameState)
