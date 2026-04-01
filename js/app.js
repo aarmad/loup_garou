@@ -498,20 +498,39 @@ function updateConnectedPlayers(gameState) {
  */
 function startGame() {
     const gameState = AppState.networkManager.getGameState();
-    const playerNames = gameState.players.map(p => p.name);
+    const playerNames = gameState.players.filter(p => !p.isPresenter).map(p => p.name);
 
-    // Démarrer le jeu
+    if (playerNames.length < AppState.selectedPlayerCount) {
+        showMessage(`Attendez que tous les joueurs (${AppState.selectedPlayerCount}) soient connectés.`);
+        return;
+    }
+
+    // Mélanger les rôles
+    const shuffledRoles = getRolesForGame(playerNames.length);
+    
+    // Assigner les rôles aux joueurs dans le réseau
+    const updatedPlayers = gameState.players.map(p => {
+        if (p.isPresenter) return p;
+        const role = shuffledRoles.pop();
+        return { ...p, role, alive: true };
+    });
+
+    // Initialiser le contrôleur de jeu local pour générer les actions nocturnes
     AppState.gameController.startNewGame(playerNames, AppState.selectedRoles);
     AppState.gameStarted = true;
+    const localState = AppState.gameController.getGameState();
 
-    // Mettre à jour l'état dans localStorage
+    // Mettre à jour l'état sur le serveur
     AppState.networkManager.updateGameState({
         state: 'playing',
-        roles: AppState.selectedRoles,
-        players: gameState.players.map(p => ({
-            ...p,
-            role: null // Les rôles seront assignés individuellement
-        }))
+        currentPhase: 'night',
+        dayCount: 1,
+        nightCount: 1,
+        players: updatedPlayers,
+        votes: {},
+        roleActions: {},
+        nightActions: localState.nightActions, // On partage la liste des actions
+        currentNightActionIndex: 0
     });
 
     // Masquer la section config, afficher la section jeu
@@ -553,16 +572,31 @@ function updateNightActionsList() {
     }
 
     state.nightActions.forEach((action, index) => {
-        const player = AppState.gameController.getPlayer(action.playerId);
-        const role = ROLES[player.role];
+        // Obtenir le nom du joueur depuis le contrôleur local
+        const playerFromInternal = AppState.gameController.getPlayer(action.playerId);
+        
+        // Trouver son playerId réseau
+        const networkState = AppState.networkManager.getGameState();
+        const playersOnly = networkState.players.filter(p => !p.isPresenter);
+        const networkPlayer = playersOnly[action.playerId];
+        
         const isActive = index === state.currentNightActionIndex;
-        const isCompleted = action.completed;
+        // Vérifier si l'action est complétée via les données du réseau
+        const isCompleted = networkState.roleActions && networkPlayer && networkState.roleActions[networkPlayer.playerId];
 
+        if (isActive && isCompleted && !action.completed) {
+            // Synchroniser le contrôleur local si l'action vient d'être faite sur le réseau
+            action.completed = true;
+            action.target = networkState.roleActions[networkPlayer.playerId].target;
+            // On pourrait appeler nextNightAction() tout de suite mais on laisse le présentateur valider
+        }
+
+        const role = ROLES[playerFromInternal.role];
         const item = document.createElement('div');
         item.className = 'action-item' + (isActive ? ' active' : '') + (isCompleted ? ' completed' : '');
         item.innerHTML = `
             <span class="action-icon">${role.emoji}</span>
-            <span>${player.name} (${role.name})</span>
+            <span>${playerFromInternal.name} (${role.name})</span>
             ${isCompleted ? '<span style="margin-left: auto;">✓</span>' : ''}
         `;
 
@@ -583,24 +617,36 @@ function previousNightAction() {
  */
 function nextNightAction() {
     const state = AppState.gameController.getGameState();
-    const action = AppState.gameController.getCurrentAction();
-    
-    if (action && !action.completed) {
-        showMessage('Complétez l\'action actuelle d\'abord');
-        return;
-    }
-
     const hasNext = AppState.gameController.nextNightAction();
 
     stopPhaseTimer();
     
     if (!hasNext) {
         // Fin de la nuit - passage au jour
-        AppState.networkManager.updateGameState({ currentPhase: 'day' });
+        const result = AppState.gameController.gameState.finishNightPhase();
+        
+        // Mettre à jour les joueurs (morts) sur le réseau
+        const networkGameState = AppState.networkManager.getGameState();
+        const updatedPlayers = networkGameState.players.map(p => {
+            if (p.isPresenter) return p;
+            const updatedInfo = AppState.gameController.getPlayers().find(gp => gp.name === p.name);
+            return { ...p, alive: updatedInfo ? updatedInfo.alive : p.alive };
+        });
+
+        AppState.networkManager.updateGameState({ 
+            currentPhase: 'day',
+            players: updatedPlayers,
+            dayCount: AppState.gameController.gameState.dayCount,
+            votes: {}, // Vider les votes de la veille
+            roleActions: {} // Vider les actions
+        });
         showDayPhase();
     } else {
+        // Mettre à jour l'index de l'action sur le réseau pour que le joueur concerné sache que c'est à lui
+        AppState.networkManager.updateGameState({ 
+            currentNightActionIndex: AppState.gameController.gameState.currentNightActionIndex 
+        });
         updateNightActionsList();
-        // relancer timer pour la prochaine action si besoin
         startPhaseTimer(45);
     }
 }
@@ -778,22 +824,37 @@ function showWaitingPanel() {
 function syncGameState(gameState) {
     if (!gameState) return;
 
+    const myPlayer = gameState.players ? gameState.players.find(p => p.playerId === AppState.myId) : null;
+    
+    // Gérer l'élimination
+    if (myPlayer && !myPlayer.alive) {
+        showEliminatedScreen();
+        return;
+    }
+
     // Vérifier si le jeu a démarré et si on connaît notre rôle
     if (gameState.state === 'playing' && gameState.players) {
-        const myPlayer = gameState.players.find(p => p.playerId === AppState.myId);
         if (myPlayer && myPlayer.role && !AppState.myRole) {
             showPlayerRole(myPlayer);
         }
     }
 
     // Synchroniser les phases
-    if (gameState.currentPhase === 'day' && AppState.gameController.getGameState().phase !== 'day') {
+    if (gameState.currentPhase === 'day') {
         showDayPhasePlayer(gameState);
-    } else if (gameState.currentPhase === 'night' && AppState.gameController.getGameState().phase !== 'night') {
+    } else if (gameState.currentPhase === 'night') {
         showNightPhasePlayer(gameState);
     } else if (gameState.currentPhase === 'voting') {
         showVotingPhasePlayer(gameState);
     }
+}
+
+/**
+ * Afficher l'écran d'élimination
+ */
+function showEliminatedScreen() {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('eliminatedPanel').classList.add('active');
 }
 
 /**
@@ -853,11 +914,34 @@ function showDayPhasePlayer(gameState) {
  * Afficher phase nuit (joueur)
  */
 function showNightPhasePlayer(gameState) {
-    const role = ROLES[AppState.myRole];
-    if (role && role.hasNightAction) {
-        showNightActionPrompt();
+    const myPlayer = gameState.players.find(p => p.playerId === AppState.myId);
+    if (!myPlayer || !myPlayer.alive) {
+        showEliminatedScreen();
+        return;
+    }
+
+    // Si j'ai déjà agi cette nuit
+    if (gameState.roleActions && gameState.roleActions[AppState.myId]) {
+        showWaitingPanel("Action enregistrée. Attente des autres...");
+        return;
+    }
+
+    const currentActionIndex = gameState.currentNightActionIndex || 0;
+    const currentAction = gameState.nightActions ? gameState.nightActions[currentActionIndex] : null;
+    
+    // Comparaison avec les noms car les IDs peuvent différer entre local et network
+    if (currentAction && currentAction.playerId !== undefined) {
+        // Trouvez le joueur correspondant à l'index de l'action dans le tableau original (GameState local du presenter)
+        // Mais ici on utilise le format du network
+        const actingPlayerOnNetwork = gameState.players.filter(p => !p.isPresenter)[currentAction.playerId];
+        
+        if (actingPlayerOnNetwork && actingPlayerOnNetwork.playerId === AppState.myId) {
+            showNightActionPrompt();
+        } else {
+            showWaitingPanel("C'est la nuit... Chut!");
+        }
     } else {
-        showWaitingPanel();
+        showWaitingPanel("C'est la nuit... Chut!");
     }
 }
 
@@ -891,6 +975,9 @@ function showNightActionPrompt() {
 }
 
 let selectedNightTarget = null;
+/**
+ * Sélectionner une cible pour l'action nocturne (joueur)
+ */
 function selectNightTarget(targetId, element) {
     document.querySelectorAll('#actionTargets .target-button').forEach(btn => {
         btn.classList.remove('selected');
@@ -898,15 +985,39 @@ function selectNightTarget(targetId, element) {
 
     selectedNightTarget = targetId;
     element.classList.add('selected');
+    
+    // Soumettre via réseau
+    AppState.networkManager.submitNightAction('use-ability', targetId);
+    
+    // Afficher attente
+    document.getElementById('nightActionPanel').classList.remove('active');
+    showWaitingPanel("Action enregistrée. Attente des autres...");
 }
 
 /**
- * Sauter l'action nocturne
+ * Passer l'action nocturne (joueur)
  */
 function skipNightAction() {
     selectedNightTarget = null;
     AppState.networkManager.submitNightAction('skip', null);
-    showWaitingPanel();
+    document.getElementById('nightActionPanel').classList.remove('active');
+    showWaitingPanel("Action sautée. Attente des autres...");
+}
+
+/**
+ * Passer la phase actuelle (présentateur)
+ */
+function skipPhase() {
+    const state = AppState.gameController.getGameState();
+    if (state.phase === 'night') {
+        const action = AppState.gameController.getCurrentAction();
+        if (action) {
+            action.completed = true;
+            nextNightAction();
+        }
+    } else if (state.phase === 'day') {
+        startVoting();
+    }
 }
 
 /**
@@ -948,13 +1059,12 @@ function selectVoteTarget(targetId, element) {
     selectedVoteTarget = targetId;
     element.classList.add('selected');
 
-    // Soumettre le vote
-    AppState.gameController.recordVote(AppState.myId, targetId);
+    // Soumettre le vote via réseau
     AppState.networkManager.submitVote(targetId);
 
     // Attendre la confirmation
     document.getElementById('votingPanel').classList.remove('active');
-    showWaitingPanel();
+    showWaitingPanel("Vote enregistré. Attente du résultat...");
 }
 
 /**
