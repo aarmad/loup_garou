@@ -144,6 +144,17 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+.form-group.hidden {
+    display: none;
+}
+
+.form-group input[type="text"] {
+    text-align: center;
+    font-weight: 600;
+    letter-spacing: 2px;
+    font-size: 18px;
+}
+
 .status-badge {
     display: flex;
     align-items: center;

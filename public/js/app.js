@@ -83,7 +83,9 @@ function updateNetworkStatus() {
 function attachEventListeners() {
     // Lobby
     document.getElementById('createGameBtn').addEventListener('click', createGame);
-    document.getElementById('joinGameBtn').addEventListener('click', joinGame);
+    document.getElementById('joinGameBtn').addEventListener('click', showJoinForm);
+    document.getElementById('confirmJoinBtn').addEventListener('click', joinGame);
+    document.getElementById('cancelJoinBtn').addEventListener('click', hideJoinForm);
 
     // Présentateur
     document.getElementById('backBtn').addEventListener('click', backToLobby);
@@ -185,6 +187,48 @@ async function createGame() {
 }
 
 /**
+ * Afficher le formulaire de rejoindre une partie
+ */
+function showJoinForm() {
+    const playerName = document.getElementById('playerName').value.trim();
+    if (!playerName) {
+        showMessage('Veuillez entrer un pseudo d\'abord');
+        return;
+    }
+
+    // Masquer les boutons principaux
+    document.querySelector('.button-group').style.display = 'none';
+
+    // Afficher le formulaire de code
+    document.getElementById('joinGameForm').classList.remove('hidden');
+
+    // Focus sur le champ de code
+    document.getElementById('gameCode').focus();
+
+    // Validation en temps réel du code
+    document.getElementById('gameCode').addEventListener('input', function(e) {
+        const code = e.target.value.trim();
+        const confirmBtn = document.getElementById('confirmJoinBtn');
+        confirmBtn.disabled = code.length !== 4 || !/^\d{4}$/.test(code);
+    });
+}
+
+/**
+ * Masquer le formulaire de rejoindre une partie
+ */
+function hideJoinForm() {
+    // Masquer le formulaire de code
+    document.getElementById('joinGameForm').classList.add('hidden');
+
+    // Afficher les boutons principaux
+    document.querySelector('.button-group').style.display = 'flex';
+
+    // Réinitialiser le champ
+    document.getElementById('gameCode').value = '';
+    document.getElementById('confirmJoinBtn').disabled = true;
+}
+
+/**
  * Rejoindre une partie existante
  */
 async function joinGame() {
@@ -194,9 +238,11 @@ async function joinGame() {
         return;
     }
 
-    // Demander le code de salle
-    const gameCode = prompt('Entrez le code de la salle:');
-    if (!gameCode) return;
+    const gameCode = document.getElementById('gameCode').value.trim();
+    if (!gameCode || gameCode.length !== 4 || !/^\d{4}$/.test(gameCode)) {
+        showMessage('Veuillez entrer un code de salle valide (4 chiffres)');
+        return;
+    }
 
     AppState.myName = playerName;
     AppState.currentRoomNumber = gameCode;
