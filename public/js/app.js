@@ -143,6 +143,13 @@ function handleStorageChange(e) {
     }
 }
 
+function setDebugInfo(text) {
+    const debugEl = document.getElementById('debugInfo');
+    if (debugEl) {
+        debugEl.textContent = text;
+    }
+}
+
 // ============================================
 // LOBBY SCREEN
 // ============================================
@@ -169,7 +176,13 @@ async function createGame() {
 
         // Afficher l'écran présentateur
         showPresenterScreen();
-        
+
+        // Vérifier que le code de salle est correctement formaté
+        if (!/^\d{4}$/.test(result.gameId)) {
+            setDebugInfo(`⚠️ Code incorrect généré (${result.gameId}). Passage en code 4 chiffres forcé.`);
+            result.gameId = (Date.now().toString().slice(-4));
+        }
+
         // Afficher le numéro de salle en permanence
         updateRoomNumberDisplay(result.gameId);
         
@@ -181,8 +194,10 @@ async function createGame() {
 
         // Notification courte du code
         showMessage(`Partie créée! Code salle: ${result.gameId}`);
+        setDebugInfo(`Salle créée: ${result.gameId} (utilisez ce code dans le champ de connexion)`);
     } catch (err) {
         showMessage('Erreur lors de la création de la partie: ' + err.message);
+        setDebugInfo(`Erreur création: ${err.message}`);
     }
 }
 
@@ -262,8 +277,11 @@ async function joinGame() {
         document.getElementById('playerRoomNumber').textContent = gameCode;
         showPlayerScreen();
         showWaitingPanel();
+
+        setDebugInfo(`Connecté à la salle: ${gameCode}. Joueurs: ${AppState.networkManager.getGameState()?.players?.length || 0}`);
     } catch (err) {
         showMessage('Impossible de se connecter: ' + err.message);
+        setDebugInfo(`Connexion échouée pour le code ${gameCode}: ${err.message}`);
     }
 }
 
@@ -693,6 +711,9 @@ function confirmVote() {
     // Commencer la nuit
     showNightPhase();
 }
+
+// Masquer le formulaire de rejoindre si visible
+hideJoinForm();
 
 /**
  * Recommencer le vote

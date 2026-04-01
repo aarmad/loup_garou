@@ -37,6 +37,20 @@
                 </button>
             </div>
 
+            <!-- Champ pour rejoindre une partie -->
+            <div id="joinGameForm" class="form-group hidden">
+                <label for="gameCode">Code de la salle (4 chiffres)</label>
+                <input type="text" id="gameCode" placeholder="Ex: 1234" maxlength="4" pattern="[0-9]{4}">
+                <div class="button-group">
+                    <button id="cancelJoinBtn" class="btn btn-secondary">
+                        <span>❌</span> Annuler
+                    </button>
+                    <button id="confirmJoinBtn" class="btn btn-primary" disabled>
+                        <span>✅</span> Confirmer
+                    </button>
+                </div>
+            </div>
+
             <div id="debugInfo" class="debug-info"></div>
         </div>
     </div>
@@ -49,6 +63,7 @@
                 <h2>Présentateur</h2>
             </div>
             <div class="header-right">
+                <span id="roomCode" class="badge hidden">Salle: —</span>
                 <span id="playerCount" class="badge">0</span>
             </div>
         </header>

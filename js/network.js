@@ -53,8 +53,8 @@ class NetworkManager {
         }
 
         const json = await response.json();
-        this.gameId = json.code;
-        this.gameState = json.game;
+        this.gameId = (json.code && /^\d{4}$/.test(json.code)) ? json.code : (Date.now().toString().slice(-4));
+        this.gameState = { ...(json.game || {}), code: this.gameId };
         this.isConnected = true;
 
         localStorage.setItem('gameId', this.gameId);
@@ -91,6 +91,18 @@ class NetworkManager {
         }
 
         this.gameState = gameState;
+
+        // Normaliser players qui pourraient être stockés comme des chaînes (ancienne implémentation)
+        if (Array.isArray(this.gameState.players)) {
+            this.gameState.players = this.gameState.players.map(p => {
+                if (typeof p === 'string') {
+                    return { playerId: p, name: p, isAlive: true, role: null, isPresenter: false };
+                }
+                return p;
+            });
+        } else {
+            this.gameState.players = [];
+        }
 
         if (!this.gameState.players.find(p => p.playerId === this.playerId)) {
             this.gameState.players.push({

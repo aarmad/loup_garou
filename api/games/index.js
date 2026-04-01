@@ -36,16 +36,33 @@ export default async function handler(req, res) {
     const urlParts = req.url.split('/').filter(Boolean);
     const code = urlParts[2] || req.query.code;
 
+    // Parser le body JSON si nécessaire (fallback robuste)
+    let body = req.body;
+    if ((!body || Object.keys(body).length === 0) && (req.method === 'POST' || req.method === 'PUT')) {
+        try {
+            const chunks = [];
+            for await (const chunk of req) chunks.push(chunk);
+            const raw = Buffer.concat(chunks).toString('utf8');
+            body = raw ? JSON.parse(raw) : {};
+        } catch (err) {
+            body = {};
+        }
+    }
+
     try {
         if (req.method === 'POST') {
             // Créer une nouvelle partie
             const newCode = generateGameCode();
+            const playerList = Array.isArray(body?.players) && body.players.length > 0
+                ? body.players
+                : [{ playerId: body?.playerId || `presenter-${Date.now()}`, name: body?.host || 'Présentateur', isAlive: true, role: null, isPresenter: true }];
+
             const game = {
                 code: newCode,
-                host: req.body?.host || 'Présentateur',
-                players: [req.body?.host || 'Présentateur'],
+                host: body?.host || 'Présentateur',
+                players: playerList,
                 state: 'lobby',
-                roles: req.body?.roles || [],
+                roles: body?.roles || [],
                 currentPhase: 'day',
                 nightActions: [],
                 votes: {},

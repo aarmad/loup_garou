@@ -60,7 +60,9 @@ function updateNetworkStatus() {
 function attachEventListeners() {
     // Lobby
     document.getElementById('createGameBtn').addEventListener('click', createGame);
-    document.getElementById('joinGameBtn').addEventListener('click', joinGame);
+    document.getElementById('joinGameBtn').addEventListener('click', showJoinForm);
+    document.getElementById('confirmJoinBtn').addEventListener('click', joinGame);
+    document.getElementById('cancelJoinBtn').addEventListener('click', hideJoinForm);
 
     // Présentateur
     document.getElementById('backBtn').addEventListener('click', backToLobby);
@@ -109,6 +111,13 @@ function loadSavedSettings() {
     }
 }
 
+function setDebugInfo(text) {
+    const debugEl = document.getElementById('debugInfo');
+    if (debugEl) {
+        debugEl.textContent = text;
+    }
+}
+
 // ============================================
 // LOBBY SCREEN
 // ============================================
@@ -136,8 +145,19 @@ async function createGame() {
         showPresenterScreen();
         updatePlayerCountDisplay();
         updateRolesList();
+        
+        // Vérifier que le code de salle est correctement formaté
+        if (!/^\d{4}$/.test(result.gameId)) {
+            setDebugInfo(`⚠️ Code incorrect généré (${result.gameId}). Passage en code 4 chiffres forcé.`);
+            result.gameId = Date.now().toString().slice(-4);
+        }
+
+        // Afficher le code de salle
+        updateRoomCodeDisplay(result.gameId);
+        setDebugInfo(`Salle créée: ${result.gameId} (utilisez ce code sur l'autre appareil)`);
     } catch (err) {
         showMessage('Erreur lors de la création de la partie: ' + err.message);
+        setDebugInfo(`Erreur création: ${err.message}`);
     }
 }
 
@@ -151,9 +171,11 @@ async function joinGame() {
         return;
     }
 
-    // Demander le code de salle
-    const gameCode = prompt('Entrez le code de la salle (4 chiffres):');
-    if (!gameCode) return;
+    const gameCode = document.getElementById('gameCode').value.trim();
+    if (!gameCode || gameCode.length !== 4 || !/^\d{4}$/.test(gameCode)) {
+        showMessage('Veuillez entrer un code de salle valide (4 chiffres)');
+        return;
+    }
 
     AppState.myName = playerName;
     saveSettings();
@@ -163,11 +185,13 @@ async function joinGame() {
         const result = await AppState.networkManager.joinGame(gameCode, playerName);
         AppState.myId = result.playerId;
 
-        // Afficher l'écran joueur
+        // Masquer le formulaire et afficher l'écran joueur
+        hideJoinForm();
         document.getElementById('playerNameDisplay').textContent = playerName;
         showPlayerScreen();
     } catch (err) {
         showMessage('Impossible de se connecter: ' + err.message);
+        setDebugInfo(`Connexion échouée pour le code ${gameCode}: ${err.message}`);
     }
 }
 
@@ -209,6 +233,61 @@ function decreasePlayerCount() {
 function updatePlayerCountDisplay() {
     document.getElementById('playerCountDisplay').textContent = AppState.selectedPlayerCount;
     updateRolesList();
+}
+
+/**
+ * Mettre à jour l'affichage du code de salle
+ */
+function updateRoomCodeDisplay(code) {
+    const roomCodeElement = document.getElementById('roomCode');
+    if (code) {
+        roomCodeElement.textContent = `Salle: ${code}`;
+        roomCodeElement.classList.remove('hidden');
+    } else {
+        roomCodeElement.classList.add('hidden');
+    }
+}
+
+/**
+ * Afficher le formulaire de rejoindre une partie
+ */
+function showJoinForm() {
+    const playerName = document.getElementById('playerName').value.trim();
+    if (!playerName) {
+        showMessage('Veuillez entrer un pseudo d\'abord');
+        return;
+    }
+
+    // Masquer les boutons principaux
+    document.querySelector('.button-group').style.display = 'none';
+
+    // Afficher le formulaire de code
+    document.getElementById('joinGameForm').classList.remove('hidden');
+
+    // Focus sur le champ de code
+    document.getElementById('gameCode').focus();
+
+    // Validation en temps réel du code
+    document.getElementById('gameCode').addEventListener('input', function(e) {
+        const code = e.target.value.trim();
+        const confirmBtn = document.getElementById('confirmJoinBtn');
+        confirmBtn.disabled = code.length !== 4 || !/^\d{4}$/.test(code);
+    });
+}
+
+/**
+ * Masquer le formulaire de rejoindre une partie
+ */
+function hideJoinForm() {
+    // Masquer le formulaire de code
+    document.getElementById('joinGameForm').classList.add('hidden');
+
+    // Afficher les boutons principaux
+    document.querySelector('.button-group').style.display = 'flex';
+
+    // Réinitialiser le champ
+    document.getElementById('gameCode').value = '';
+    document.getElementById('confirmJoinBtn').disabled = true;
 }
 
 /**
