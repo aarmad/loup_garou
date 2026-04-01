@@ -123,7 +123,7 @@ class NetworkManager {
         if (!this.gameId) return null;
 
         try {
-            const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+            const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
             const resp = await fetch(url);
             if (!resp.ok) {
                 if (resp.status === 404) return null;
@@ -233,7 +233,7 @@ class NetworkManager {
     async _saveRemoteState() {
         if (!this.gameId) return null;
 
-        const url = `${API_BASE}?code=${encodeURIComponent(this.gameId)}`;
+        const url = `${API_BASE}/${encodeURIComponent(this.gameId)}`;
         const resp = await fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

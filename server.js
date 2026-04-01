@@ -542,15 +542,16 @@ function start() {
     const httpsServer = https.createServer(httpsOptions, handleRequest);
     setupWebSocket(httpsServer);
 
-    httpsServer.listen(HTTPS_PORT, () => {
+    httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
         console.log(`\n✅ Serveur HTTPS sur https://localhost:${HTTPS_PORT}`);
+        console.log(`🌐 Accessible aussi sur https://<votre-ip>:${HTTPS_PORT} depuis d'autres appareils`);
     });
 
     // Redirection HTTP
     http.createServer((req, res) => {
         res.writeHead(301, { 'Location': `https://localhost:${HTTPS_PORT}${req.url}` });
         res.end();
-    }).listen(HTTP_PORT, () => {
+    }).listen(HTTP_PORT, '0.0.0.0', () => {
         console.log(`📌 Redirection HTTP sur http://localhost:${HTTP_PORT}\n`);
     });
 }
