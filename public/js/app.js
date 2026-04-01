@@ -479,16 +479,16 @@ function updateConnectedPlayers(gameState) {
     if (!gameState) return;
     
     AppState.connectedPlayers = gameState.players.filter(p => !p.isPresenter) || [];
-    const playerCountElement = document.getElementById('playerCount');
+    const playerCountPresenter = document.getElementById('playerCountPresenter');
+    const playerCountStatus = document.getElementById('playerCountStatus');
     const connectedCountElement = document.getElementById('connectedPlayersCount');
+    const playerCountPlayer = document.getElementById('playerCountPlayer');
     
     const totalPlayers = gameState.players.length;
-    if (playerCountElement) {
-        playerCountElement.textContent = totalPlayers;
-    }
-    if (connectedCountElement) {
-        connectedCountElement.textContent = totalPlayers;
-    }
+    if (playerCountPresenter) playerCountPresenter.textContent = totalPlayers;
+    if (playerCountStatus) playerCountStatus.textContent = totalPlayers;
+    if (connectedCountElement) connectedCountElement.textContent = totalPlayers;
+    if (playerCountPlayer) playerCountPlayer.textContent = totalPlayers;
     
     updateStartButton();
 }
@@ -741,6 +741,7 @@ function backToLobby() {
     AppState.networkManager.disconnect();
     
     document.getElementById('presenterScreen').classList.remove('active');
+    document.getElementById('playerScreen').classList.remove('active');
     document.getElementById('lobbyScreen').classList.add('active');
     
     document.getElementById('configSection').classList.remove('hidden');

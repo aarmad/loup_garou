@@ -9,12 +9,15 @@ const AppState = {
     myRole: null,
     myId: null,
     isPresenter: false,
+    currentRoomNumber: null,
     gameController: null,
     networkManager: null,
-    syncManager: null,
     connectedPlayers: [],
     selectedRoles: [],
-    selectedPlayerCount: 3
+    selectedPlayerCount: 3,
+    gameStarted: false,
+    phaseTimerInterval: null,
+    phaseSecondsLeft: 0
 };
 
 /**
@@ -26,7 +29,6 @@ function initializeApp() {
     // Créer les instances
     AppState.gameController = new GameController();
     AppState.networkManager = new NetworkManager();
-    AppState.syncManager = new SyncManager(AppState.networkManager, AppState.gameController);
 
     // Attacher les listeners d'événements
     attachEventListeners();
@@ -37,6 +39,27 @@ function initializeApp() {
     // Charger les paramètres sauvegardés
     loadSavedSettings();
 
+    // Écouter les changements localStorage (pour un onglet)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Écouter les changements via NetworkManager (pour multi-appareils)
+    AppState.networkManager.addEventListener((event) => {
+        if (!event || !event.type) return;
+
+        if (event.type === 'GAME_STATE_CHANGED' || event.type === 'GAME_STATE_UPDATED') {
+            const gameState = event.data;
+            if (!gameState) return;
+
+            if (AppState.isPresenter) {
+                updateConnectedPlayers(gameState);
+                updateRolesList();
+            } else {
+                syncGameState(gameState);
+                updateConnectedPlayers(gameState);
+            }
+        }
+    });
+
     console.log('Application initialisée ✓');
 }
 
@@ -44,14 +67,22 @@ function initializeApp() {
  * Mettre à jour le statut réseau
  */
 function updateNetworkStatus() {
-    const statusElement = document.getElementById('bluetoothStatus');
+    setConnectionStatus('Connecté au serveur', true);
     const createBtn = document.getElementById('createGameBtn');
     const joinBtn = document.getElementById('joinGameBtn');
 
-    statusElement.innerHTML = '<span class="status-icon">✅</span> <span>Connecté au serveur</span>';
-    statusElement.classList.add('available');
     createBtn.disabled = false;
     joinBtn.disabled = false;
+}
+
+function setConnectionStatus(text, online) {
+    const statusElement = document.getElementById('bluetoothStatus');
+    const statusText = document.getElementById('networkStatusText');
+    if (!statusElement || !statusText) return;
+
+    statusText.textContent = text;
+    statusElement.classList.remove('success', 'warning', 'error');
+    statusElement.classList.add(online ? 'success' : 'error');
 }
 
 /**
@@ -74,6 +105,7 @@ function attachEventListeners() {
     document.getElementById('startVotingBtn').addEventListener('click', startVoting);
     document.getElementById('confirmVoteBtn').addEventListener('click', confirmVote);
     document.getElementById('retryVoteBtn').addEventListener('click', retryVote);
+    document.getElementById('skipPhaseBtn').addEventListener('click', skipPhase);
 
     // Joueur
     document.getElementById('disconnectBtn').addEventListener('click', disconnect);
@@ -82,16 +114,6 @@ function attachEventListeners() {
     document.getElementById('abstainBtn').addEventListener('click', abstainVote);
     document.getElementById('continueBtn').addEventListener('click', continueGame);
     document.getElementById('dismissMessageBtn').addEventListener('click', dismissMessage);
-
-    // Réseau events
-    AppState.networkManager.onMessage((message) => handleNetworkMessage(message));
-
-    // Événements personnalisés
-    window.addEventListener ('playerJoined', (e) => handlePlayerJoined(e.detail));
-    window.addEventListener('roleAssigned', (e) => showPlayerRole(e.detail));
-    window.addEventListener('nightActionPrompt', (e) => showNightActionPrompt(e.detail));
-    window.addEventListener('votingPrompt', (e) => showVotingPrompt(e.detail));
-    window.addEventListener('gameEnded', (e) => endGame(e.detail));
 }
 
 /**
@@ -108,6 +130,24 @@ function loadSavedSettings() {
     const saved = localStorage.getItem('playerName');
     if (saved) {
         document.getElementById('playerName').value = saved;
+    }
+}
+
+/**
+ * Gérer les changements localStorage
+ */
+function handleStorageChange(e) {
+    if (e.key && e.key.startsWith('game_')) {
+        // L'état de la partie a changé
+        const newState = JSON.parse(e.newValue);
+        
+        if (AppState.isPresenter) {
+            // Présentateur: afficher les joueurs connectés
+            updateConnectedPlayers(newState);
+        } else if (AppState.gameStarted) {
+            // Joueur: synchroniser l'état du jeu
+            syncGameState(newState);
+        }
     }
 }
 
@@ -140,25 +180,75 @@ async function createGame() {
         // Créer la partie via réseau
         const result = await AppState.networkManager.createGame(playerName);
         AppState.myId = result.playerId;
+        AppState.currentRoomNumber = result.gameId;
 
         // Afficher l'écran présentateur
         showPresenterScreen();
-        updatePlayerCountDisplay();
-        updateRolesList();
-        
+
         // Vérifier que le code de salle est correctement formaté
         if (!/^\d{4}$/.test(result.gameId)) {
             setDebugInfo(`⚠️ Code incorrect généré (${result.gameId}). Passage en code 4 chiffres forcé.`);
-            result.gameId = Date.now().toString().slice(-4);
+            result.gameId = (Date.now().toString().slice(-4));
         }
 
-        // Afficher le code de salle
-        updateRoomCodeDisplay(result.gameId);
-        setDebugInfo(`Salle créée: ${result.gameId} (utilisez ce code sur l'autre appareil)`);
+        // Afficher le numéro de salle en permanence
+        updateRoomNumberDisplay(result.gameId);
+        
+        updatePlayerCountDisplay();
+        updateRolesList();
+
+        // Mettre à jour l'affichage du compteur players
+        updateConnectedPlayers(AppState.networkManager.getGameState());
+
+        // Notification courte du code
+        showMessage(`Partie créée! Code salle: ${result.gameId}`);
+        setDebugInfo(`Salle créée: ${result.gameId} (utilisez ce code dans le champ de connexion)`);
     } catch (err) {
         showMessage('Erreur lors de la création de la partie: ' + err.message);
         setDebugInfo(`Erreur création: ${err.message}`);
     }
+}
+
+/**
+ * Afficher le formulaire de rejoindre une partie
+ */
+function showJoinForm() {
+    const playerName = document.getElementById('playerName').value.trim();
+    if (!playerName) {
+        showMessage('Veuillez entrer un pseudo d\'abord');
+        return;
+    }
+
+    // Masquer les boutons principaux
+    document.querySelector('.button-group').style.display = 'none';
+
+    // Afficher le formulaire de code
+    document.getElementById('joinGameForm').classList.remove('hidden');
+
+    // Focus sur le champ de code
+    document.getElementById('gameCode').focus();
+
+    // Validation en temps réel du code
+    document.getElementById('gameCode').addEventListener('input', function(e) {
+        const code = e.target.value.trim();
+        const confirmBtn = document.getElementById('confirmJoinBtn');
+        confirmBtn.disabled = code.length !== 4 || !/^\d{4}$/.test(code);
+    });
+}
+
+/**
+ * Masquer le formulaire de rejoindre une partie
+ */
+function hideJoinForm() {
+    // Masquer le formulaire de code
+    document.getElementById('joinGameForm').classList.add('hidden');
+
+    // Afficher les boutons principaux
+    document.querySelector('.button-group').style.display = 'flex';
+
+    // Réinitialiser le champ
+    document.getElementById('gameCode').value = '';
+    document.getElementById('confirmJoinBtn').disabled = true;
 }
 
 /**
@@ -178,6 +268,7 @@ async function joinGame() {
     }
 
     AppState.myName = playerName;
+    AppState.currentRoomNumber = gameCode;
     saveSettings();
 
     try {
@@ -185,10 +276,17 @@ async function joinGame() {
         const result = await AppState.networkManager.joinGame(gameCode, playerName);
         AppState.myId = result.playerId;
 
-        // Masquer le formulaire et afficher l'écran joueur
-        hideJoinForm();
+        // Mise à jour du compteur et du numéro de salle
+        updateRoomNumberDisplay(gameCode);
+        updateConnectedPlayers(AppState.networkManager.getGameState());
+
+        // Afficher l'écran joueur
         document.getElementById('playerNameDisplay').textContent = playerName;
+        document.getElementById('playerRoomNumber').textContent = gameCode;
         showPlayerScreen();
+        showWaitingPanel();
+
+        setDebugInfo(`Connecté à la salle: ${gameCode}. Joueurs: ${AppState.networkManager.getGameState()?.players?.length || 0}`);
     } catch (err) {
         showMessage('Impossible de se connecter: ' + err.message);
         setDebugInfo(`Connexion échouée pour le code ${gameCode}: ${err.message}`);
@@ -236,58 +334,63 @@ function updatePlayerCountDisplay() {
 }
 
 /**
- * Mettre à jour l'affichage du code de salle
+ * Mettre à jour le numéro de salle
  */
-function updateRoomCodeDisplay(code) {
-    const roomCodeElement = document.getElementById('roomCode');
-    if (code) {
-        roomCodeElement.textContent = `Salle: ${code}`;
-        roomCodeElement.classList.remove('hidden');
-    } else {
-        roomCodeElement.classList.add('hidden');
+function updateRoomNumberDisplay(roomNumber) {
+    AppState.currentRoomNumber = roomNumber;
+    const presenterRoom = document.getElementById('roomNumber');
+    const playerRoom = document.getElementById('playerRoomNumber');
+    
+    if (presenterRoom) presenterRoom.textContent = roomNumber;
+    if (playerRoom) playerRoom.textContent = roomNumber;
+}
+
+function formatTimer(seconds) {
+    const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const sec = (seconds % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+}
+
+function startPhaseTimer(durationSeconds) {
+    stopPhaseTimer();
+    AppState.phaseSecondsLeft = durationSeconds;
+
+    const phaseTimerEl = document.getElementById('phaseTimer');
+    if (phaseTimerEl) phaseTimerEl.textContent = formatTimer(durationSeconds);
+
+    AppState.phaseTimerInterval = setInterval(() => {
+        AppState.phaseSecondsLeft -= 1;
+        if (phaseTimerEl) phaseTimerEl.textContent = formatTimer(AppState.phaseSecondsLeft);
+
+        if (AppState.phaseSecondsLeft <= 0) {
+            stopPhaseTimer();
+            if (AppState.isPresenter) {
+                if (AppState.gameController.getGameState().phase === 'night') {
+                    nextNightAction();
+                } else {
+                    startVoting();
+                }
+            }
+        }
+    }, 1000);
+}
+
+function stopPhaseTimer() {
+    if (AppState.phaseTimerInterval) {
+        clearInterval(AppState.phaseTimerInterval);
+        AppState.phaseTimerInterval = null;
     }
 }
 
-/**
- * Afficher le formulaire de rejoindre une partie
- */
-function showJoinForm() {
-    const playerName = document.getElementById('playerName').value.trim();
-    if (!playerName) {
-        showMessage('Veuillez entrer un pseudo d\'abord');
-        return;
+function skipPhase() {
+    stopPhaseTimer();
+
+    const phase = AppState.gameController.getGameState().phase;
+    if (phase === 'night') {
+        nextNightAction();
+    } else if (phase === 'day') {
+        startVoting();
     }
-
-    // Masquer les boutons principaux
-    document.querySelector('.button-group').style.display = 'none';
-
-    // Afficher le formulaire de code
-    document.getElementById('joinGameForm').classList.remove('hidden');
-
-    // Focus sur le champ de code
-    document.getElementById('gameCode').focus();
-
-    // Validation en temps réel du code
-    document.getElementById('gameCode').addEventListener('input', function(e) {
-        const code = e.target.value.trim();
-        const confirmBtn = document.getElementById('confirmJoinBtn');
-        confirmBtn.disabled = code.length !== 4 || !/^\d{4}$/.test(code);
-    });
-}
-
-/**
- * Masquer le formulaire de rejoindre une partie
- */
-function hideJoinForm() {
-    // Masquer le formulaire de code
-    document.getElementById('joinGameForm').classList.add('hidden');
-
-    // Afficher les boutons principaux
-    document.querySelector('.button-group').style.display = 'flex';
-
-    // Réinitialiser le champ
-    document.getElementById('gameCode').value = '';
-    document.getElementById('confirmJoinBtn').disabled = true;
 }
 
 /**
@@ -354,29 +457,62 @@ function toggleRole(roleName, element) {
  */
 function updateStartButton() {
     const btn = document.getElementById('startGameBtn');
-    const validation = validateSelectedRoles(AppState.selectedRoles, AppState.selectedPlayerCount);
-    btn.disabled = !validation.valid;
+    const gameState = AppState.networkManager.getGameState();
+    
+    const enoughPlayers = gameState && gameState.players && 
+                          gameState.players.length >= AppState.selectedPlayerCount;
+    const validRoles = validateSelectedRoles(AppState.selectedRoles, AppState.selectedPlayerCount);
+    
+    btn.disabled = !enoughPlayers || !validRoles.valid;
 
-    if (!validation.valid) {
-        btn.title = validation.error;
+    if (!enoughPlayers) {
+        btn.title = 'Attendez plus de joueurs';
+    } else if (!validRoles.valid) {
+        btn.title = validRoles.error;
     }
+}
+
+/**
+ * Mettre à jour les joueurs connectés
+ */
+function updateConnectedPlayers(gameState) {
+    if (!gameState) return;
+    
+    AppState.connectedPlayers = gameState.players.filter(p => !p.isPresenter) || [];
+    const playerCountPresenter = document.getElementById('playerCountPresenter');
+    const playerCountStatus = document.getElementById('playerCountStatus');
+    const connectedCountElement = document.getElementById('connectedPlayersCount');
+    const playerCountPlayer = document.getElementById('playerCountPlayer');
+    
+    const totalPlayers = gameState.players.length;
+    if (playerCountPresenter) playerCountPresenter.textContent = totalPlayers;
+    if (playerCountStatus) playerCountStatus.textContent = totalPlayers;
+    if (connectedCountElement) connectedCountElement.textContent = totalPlayers;
+    if (playerCountPlayer) playerCountPlayer.textContent = totalPlayers;
+    
+    updateStartButton();
 }
 
 /**
  * Démarrer la partie
  */
 function startGame() {
-    if (AppState.connectedPlayers.length < AppState.selectedPlayerCount) {
-        showMessage(`Attendez ${AppState.selectedPlayerCount - AppState.connectedPlayers.length} joueur(s) supplémentaire(s)`);
-        return;
-    }
-
-    // Shuffle les rôles et assigner aux joueurs
-    const shuffledRoles = getRolesForGame(AppState.selectedPlayerCount);
-    const playerNames = AppState.connectedPlayers.map(p => p.name);
+    const gameState = AppState.networkManager.getGameState();
+    const playerNames = gameState.players.map(p => p.name);
 
     // Démarrer le jeu
-    AppState.gameController.startNewGame(playerNames, shuffledRoles);
+    AppState.gameController.startNewGame(playerNames, AppState.selectedRoles);
+    AppState.gameStarted = true;
+
+    // Mettre à jour l'état dans localStorage
+    AppState.networkManager.updateGameState({
+        state: 'playing',
+        roles: AppState.selectedRoles,
+        players: gameState.players.map(p => ({
+            ...p,
+            role: null // Les rôles seront assignés individuellement
+        }))
+    });
 
     // Masquer la section config, afficher la section jeu
     document.getElementById('configSection').classList.add('hidden');
@@ -384,21 +520,22 @@ function startGame() {
 
     // Commencer par la nuit
     showNightPhase();
-
-    // Synchroniser avec les joueurs
-    AppState.networkManager.startGame(shuffledRoles);
 }
 
 /**
  * Afficher la phase de nuit
  */
 function showNightPhase() {
-    document.getElementById('currentPhase').textContent = `Nuit ${AppState.gameController.getGameState().nightCount + 1}`;
+    const state = AppState.gameController.getGameState();
+    document.getElementById('currentPhase').textContent = `Nuit ${state.nightCount + 1}`;
     document.getElementById('nightPanel').classList.add('active');
     document.getElementById('dayPanel').classList.remove('active');
     document.getElementById('votingPanel').classList.remove('active');
 
     updateNightActionsList();
+
+    // Timer de phase nocturne (60s par défaut - le présentateur peut passer)
+    startPhaseTimer(60);
 }
 
 /**
@@ -408,6 +545,12 @@ function updateNightActionsList() {
     const list = document.getElementById('nightActionsList');
     const state = AppState.gameController.getGameState();
     list.innerHTML = '';
+
+    if (!state.nightActions || state.nightActions.length === 0) {
+        // Pas d'actions - passer au jour
+        nextNightAction();
+        return;
+    }
 
     state.nightActions.forEach((action, index) => {
         const player = AppState.gameController.getPlayer(action.playerId);
@@ -431,64 +574,51 @@ function updateNightActionsList() {
  * Action nocturne précédente
  */
 function previousNightAction() {
-    if (AppState.gameController.gameState.previousNightAction()) {
-        updateNightActionsList();
-        promptNightAction();
-    }
+    AppState.gameController.gameState.previousNightAction();
+    updateNightActionsList();
 }
 
 /**
  * Action nocturne suivante
  */
 function nextNightAction() {
+    const state = AppState.gameController.getGameState();
     const action = AppState.gameController.getCurrentAction();
-    if (!action || !action.completed) {
+    
+    if (action && !action.completed) {
         showMessage('Complétez l\'action actuelle d\'abord');
         return;
     }
 
-    if (!AppState.gameController.nextNightAction()) {
+    const hasNext = AppState.gameController.nextNightAction();
+
+    stopPhaseTimer();
+    
+    if (!hasNext) {
         // Fin de la nuit - passage au jour
+        AppState.networkManager.updateGameState({ currentPhase: 'day' });
         showDayPhase();
     } else {
         updateNightActionsList();
-        promptNightAction();
+        // relancer timer pour la prochaine action si besoin
+        startPhaseTimer(45);
     }
-}
-
-/**
- * Inviter à l'action nocturne
- */
-function promptNightAction() {
-    const player = AppState.gameController.getCurrentPlayer();
-    const action = AppState.gameController.getCurrentAction();
-
-    if (!player || !action) {
-        // Fin de la nuit automatiquement
-        nextNightAction();
-        return;
-    }
-
-    // Envoyer l'invitation au joueur
-    AppState.syncManager.sendPlayerAction('nightActionPrompt', {
-        playerId: player.id,
-        action: action
-    });
-
-    // Afficher localement (pour simulation)
-    console.log(`${player.name} doit agir: ${action.actionType}`);
 }
 
 /**
  * Afficher la phase de jour
  */
 function showDayPhase() {
-    document.getElementById('currentPhase').textContent = `Jour ${AppState.gameController.getGameState().dayCount}`;
+    const state = AppState.gameController.getGameState();
+    document.getElementById('currentPhase').textContent = `Jour ${state.dayCount}`;
     document.getElementById('nightPanel').classList.remove('active');
     document.getElementById('dayPanel').classList.add('active');
     document.getElementById('votingPanel').classList.remove('active');
 
     updatePlayersList();
+
+    // Timer de discussion de jour (120s par défaut)
+    startPhaseTimer(120);
 }
 
 /**
@@ -504,9 +634,14 @@ function updatePlayersList() {
 
         const item = document.createElement('div');
         item.className = 'player-item';
+        let roleEmoji = role.emoji;
+        if (role.image) {
+            roleEmoji = `<img src="${role.image}" alt="${role.name}" style="width: 24px; height: 24px; object-fit: contain;" />`;
+        }
+        
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <span style="font-size: 20px;">${role.emoji}</span>
+                <span style="font-size: 20px;">${roleEmoji}</span>
                 <div style="flex: 1;">
                     <div class="player-name">${player.name}</div>
                     <div class="player-role">${role.name}</div>
@@ -525,20 +660,15 @@ function updatePlayersList() {
  * Démarrer la phase de vote
  */
 function startVoting() {
-    // Envoyer les invitations de vote aux joueurs
-    AppState.gameController.getAlivePlayers().forEach(player => {
-        AppState.syncManager.sendPlayerAction('votingInvitation', {
-            playerId: player.id
-        });
-    });
+    stopPhaseTimer();
+    AppState.networkManager.updateGameState({ currentPhase: 'voting' });
 
     document.getElementById('dayPanel').classList.remove('active');
     document.getElementById('votingPanel').classList.add('active');
 
-    // Simuler l'attente des votes (en réalité, ils arrivent via Bluetooth)
     setTimeout(() => {
         showVoteResults();
-    }, 10000);
+    }, 5000);
 }
 
 /**
@@ -577,7 +707,7 @@ function confirmVote() {
     if (!results.eliminated) return;
 
     const playerId = results.eliminated;
-    const result = AppState.gameController.applyElimination(playerId);
+    AppState.gameController.applyElimination(playerId);
 
     // Vérifier les conditions de victoire
     const winCheck = AppState.gameController.checkWinConditions();
@@ -590,6 +720,9 @@ function confirmVote() {
     showNightPhase();
 }
 
+// Masquer le formulaire de rejoindre si visible
+hideJoinForm();
+
 /**
  * Recommencer le vote
  */
@@ -601,17 +734,18 @@ function retryVote() {
  * Retour au lobby
  */
 function backToLobby() {
-    if (confirm('Êtes-vous sûr? Cela fermera la partie.')) {
-        AppState.isPresenter = false;
-        AppState.connectedPlayers = [];
-        AppState.selectedRoles = [];
-        
-        document.getElementById('presenterScreen').classList.remove('active');
-        document.getElementById('lobbyScreen').classList.add('active');
-        
-        document.getElementById('configSection').classList.remove('hidden');
-        document.getElementById('gameSection').classList.add('hidden');
-    }
+    AppState.isPresenter = false;
+    AppState.gameStarted = false;
+    AppState.connectedPlayers = [];
+    AppState.selectedRoles = [];
+    AppState.networkManager.disconnect();
+    
+    document.getElementById('presenterScreen').classList.remove('active');
+    document.getElementById('playerScreen').classList.remove('active');
+    document.getElementById('lobbyScreen').classList.add('active');
+    
+    document.getElementById('configSection').classList.remove('hidden');
+    document.getElementById('gameSection').classList.add('hidden');
 }
 
 // ============================================
@@ -624,7 +758,6 @@ function backToLobby() {
 function showPlayerScreen() {
     document.getElementById('lobbyScreen').classList.remove('active');
     document.getElementById('playerScreen').classList.add('active');
-    showWaitingPanel();
 }
 
 /**
@@ -640,20 +773,43 @@ function showWaitingPanel() {
 }
 
 /**
+ * Synchroniser l'état du jeu pour le joueur
+ */
+function syncGameState(gameState) {
+    if (!gameState) return;
+
+    // Vérifier si le jeu a démarré et si on connaît notre rôle
+    if (gameState.state === 'playing' && gameState.players) {
+        const myPlayer = gameState.players.find(p => p.playerId === AppState.myId);
+        if (myPlayer && myPlayer.role && !AppState.myRole) {
+            showPlayerRole(myPlayer);
+        }
+    }
+
+    // Synchroniser les phases
+    if (gameState.currentPhase === 'day' && AppState.gameController.getGameState().phase !== 'day') {
+        showDayPhasePlayer(gameState);
+    } else if (gameState.currentPhase === 'night' && AppState.gameController.getGameState().phase !== 'night') {
+        showNightPhasePlayer(gameState);
+    } else if (gameState.currentPhase === 'voting') {
+        showVotingPhasePlayer(gameState);
+    }
+}
+
+/**
  * Afficher le rôle du joueur
  */
-function showPlayerRole(detail) {
-    AppState.myRole = detail.role;
-    AppState.myId = detail.playerId;
-
-    const role = ROLES[detail.role];
+function showPlayerRole(player) {
+    AppState.myRole = player.role;
+    const role = ROLES[player.role];
     
+    if (!role) return;
+
     // Afficher l'image du rôle
-    const roleEmojiDiv = document.getElementById('roleEmoji');
-    if (role.image) {
-        roleEmojiDiv.innerHTML = `<img src="${role.image}" alt="${role.name}" />`;
-    } else {
-        roleEmojiDiv.textContent = role.emoji;
+    const roleImg = document.getElementById('roleImg');
+    if (role.image && roleImg) {
+        roleImg.src = role.image;
+        roleImg.alt = role.name;
     }
     
     document.getElementById('roleName').textContent = role.name;
@@ -687,44 +843,60 @@ function confirmRole() {
 }
 
 /**
- * Afficher l'invite d'action nocturne
+ * Afficher phase jour (joueur)
  */
-function showNightActionPrompt(detail) {
-    const role = ROLES[detail.action.role];
-    document.getElementById('actionPrompt').textContent = `Choisissez une cible pour: ${role.nightActionType}`;
+function showDayPhasePlayer(gameState) {
+    showWaitingPanel();
+}
 
-    // Remplir les cibles disponibles
-    const targets = AppState.gameController.getAvailableTargets(
-        detail.action.targetType,
-        AppState.myId
-    );
+/**
+ * Afficher phase nuit (joueur)
+ */
+function showNightPhasePlayer(gameState) {
+    const role = ROLES[AppState.myRole];
+    if (role && role.hasNightAction) {
+        showNightActionPrompt();
+    } else {
+        showWaitingPanel();
+    }
+}
+
+/**
+ * Afficher l'invite d'action nocturne (joueur)
+ */
+function showNightActionPrompt() {
+    const role = ROLES[AppState.myRole];
+    if (!role) return;
+
+    const alivePlayers = AppState.gameController.getAlivePlayers();
+    
+    document.getElementById('actionPrompt').textContent = `Choisissez une cible pour: ${role.nightActionType}`;
 
     const targetsList = document.getElementById('actionTargets');
     targetsList.innerHTML = '';
 
-    targets.forEach(target => {
+    alivePlayers.forEach(player => {
+        if (player.id === AppState.myId) return; // Ne pas se cibler soi-même
+        
         const btn = document.createElement('button');
         btn.className = 'target-button';
-        btn.innerHTML = `<span>${target.name}</span>`;
-        btn.addEventListener('click', () => selectTarget(target.id, btn, detail.action));
+        btn.innerHTML = `<span>${player.name}</span>`;
+        btn.addEventListener('click', () => selectNightTarget(player.id, btn));
         targetsList.appendChild(btn);
     });
 
-    document.getElementById('rolePanel').classList.remove('active');
     document.getElementById('nightActionPanel').classList.add('active');
+    document.getElementById('rolePanel').classList.remove('active');
+    document.getElementById('waitingPanel').classList.remove('active');
 }
 
-/**
- * Sélectionner une cible
- */
-let selectedTarget = null;
-function selectTarget(targetId, element, action) {
-    // Désélectionner le précédent
-    document.querySelectorAll('.target-button').forEach(btn => {
+let selectedNightTarget = null;
+function selectNightTarget(targetId, element) {
+    document.querySelectorAll('#actionTargets .target-button').forEach(btn => {
         btn.classList.remove('selected');
     });
 
-    selectedTarget = targetId;
+    selectedNightTarget = targetId;
     element.classList.add('selected');
 }
 
@@ -732,37 +904,41 @@ function selectTarget(targetId, element, action) {
  * Sauter l'action nocturne
  */
 function skipNightAction() {
-    AppState.syncManager.sendPlayerAction('skipNightAction', {
-        playerId: AppState.myId
-    });
-
+    selectedNightTarget = null;
+    AppState.networkManager.submitNightAction('skip', null);
     showWaitingPanel();
 }
 
 /**
- * Afficher l'invite de vote
+ * Afficher phase vote (joueur)
  */
-function showVotingPrompt(detail) {
-    const targets = AppState.gameController.getAlivePlayers();
+function showVotingPhasePlayer(gameState) {
+    showVotingPrompt();
+}
+
+/**
+ * Afficher l'invite de vote (joueur)
+ */
+function showVotingPrompt() {
+    const alivePlayers = AppState.gameController.getAlivePlayers();
 
     const targetsList = document.getElementById('votingTargets');
     targetsList.innerHTML = '';
 
-    targets.forEach(target => {
+    alivePlayers.forEach(player => {
+        if (player.id === AppState.myId) return; // Ne pas voter pour soi-même
+        
         const btn = document.createElement('button');
         btn.className = 'target-button';
-        btn.innerHTML = `<span>${target.name}</span>`;
-        btn.addEventListener('click', () => selectVoteTarget(target.id, btn));
+        btn.innerHTML = `<span>${player.name}</span>`;
+        btn.addEventListener('click', () => selectVoteTarget(player.id, btn));
         targetsList.appendChild(btn);
     });
 
-    document.getElementById('nightActionPanel').classList.remove('active');
+    document.getElementById('waitingPanel').classList.remove('active');
     document.getElementById('votingPanel').classList.add('active');
 }
 
-/**
- * Sélectionner une cible de vote
- */
 let selectedVoteTarget = null;
 function selectVoteTarget(targetId, element) {
     document.querySelectorAll('#votingTargets .target-button').forEach(btn => {
@@ -772,9 +948,9 @@ function selectVoteTarget(targetId, element) {
     selectedVoteTarget = targetId;
     element.classList.add('selected');
 
-    // Envoyer le vote immédiatement
+    // Soumettre le vote
     AppState.gameController.recordVote(AppState.myId, targetId);
-    AppState.syncManager.sendVote(AppState.myId, targetId);
+    AppState.networkManager.submitVote(targetId);
 
     // Attendre la confirmation
     document.getElementById('votingPanel').classList.remove('active');
@@ -786,27 +962,10 @@ function selectVoteTarget(targetId, element) {
  */
 function abstainVote() {
     AppState.gameController.recordVote(AppState.myId, null);
-    AppState.syncManager.sendVote(AppState.myId, null);
+    AppState.networkManager.submitVote(null);
 
     document.getElementById('votingPanel').classList.remove('active');
     showWaitingPanel();
-}
-
-/**
- * Afficher l'élimination
- */
-function showEliminationResult(detail) {
-    if (detail.result.playerId === AppState.myId) {
-        // Vous avez été éliminé
-        document.getElementById('eliminatedPanel').classList.add('active');
-        document.getElementById('resultPanel').classList.remove('active');
-    } else {
-        // Quelqu'un d'autre a été éliminé
-        const eliminated = AppState.gameController.getPlayer(detail.result.playerId);
-        document.getElementById('resultText').textContent = `${eliminated.name} a été éliminé.`;
-        document.getElementById('resultStatus').textContent = '⚰️';
-        document.getElementById('resultPanel').classList.add('active');
-    }
 }
 
 /**
@@ -830,67 +989,16 @@ function endGame(detail) {
  */
 function dismissMessage() {
     document.getElementById('messagePanel').classList.remove('active');
+    backToLobby();
 }
 
 /**
  * Déconnecter
  */
 function disconnect() {
-    if (confirm('Êtes-vous sûr de vouloir quitter?')) {
-        AppState.networkManager.disconnect();
-        backToLobby();
-    }
-}
-
-// ============================================
-// HANDLERS BLUETOOTH
-// ============================================
-
-/**
- * Traiter les messages Bluetooth
- */
-function handleNetworkMessage(message) {
-    console.log('[APP] Message reçu:', message.type);
-
-    switch (message.type) {
-        case 'GAME_STARTED':
-            console.log('Jeu démarré');
-            break;
-        case 'PHASE_CHANGED':
-            console.log('Phase changée:', message.phase);
-            break;
-        case 'PLAYER_ELIMINATED':
-            console.log('Joueur éliminé:', message.playerId);
-            break;
-        case 'VOTE_SUBMITTED':
-            console.log('Vote soumis:', message.voterId);
-            break;
-    }
-}
-
-/**
- * Gérer la connexion d'un joueur
- */
-function handlePlayerConnected(message) {
-    console.log(`Connecté en tant que ${message.role}`);
-}
-
-/**
- * Gérer un joueur qui rejoint
- */
-function handlePlayerJoined(message) {
-    console.log(`${message.name} a rejoint!`);
-
-    // Ajouter à la liste si on est présentateur
-    if (AppState.isPresenter) {
-        AppState.connectedPlayers.push({
-            name: message.name,
-            id: message.playerId
-        });
-
-        // Mettre à jour l'affichage
-        document.getElementById('playerCount').textContent = AppState.connectedPlayers.length;
-    }
+    AppState.networkManager.disconnect();
+    setConnectionStatus('Déconnecté', false);
+    backToLobby();
 }
 
 // ============================================
@@ -901,7 +1009,14 @@ function handlePlayerJoined(message) {
  * Afficher un message
  */
 function showMessage(text) {
-    alert(text); // À remplacer par une notification élégante
+    const messagePanel = document.getElementById('messagePanel');
+    const messageText = document.getElementById('messageText');
+    if (messagePanel && messageText) {
+        messageText.textContent = text;
+        messagePanel.classList.add('active');
+        return;
+    }
+    console.warn('showMessage:', text);
 }
 
 /**
