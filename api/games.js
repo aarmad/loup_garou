@@ -1,11 +1,9 @@
 /**
  * API Vercel Function pour le jeu Loup-Garou
- * Gestion des parties (création, synchronisation)
+ * Synchronisation avec MongoDB Atlas
  */
 
-// Stockage en mémoire pour les parties (en production, utiliser une DB)
-const games = new Map();
-const players = new Map();
+import { getGame, createGame, updateGame } from '../lib/mongodb.js';
 
 /**
  * Génère un code unique de 4 chiffres
@@ -19,7 +17,7 @@ function generateGameCode() {
  * POST /api/games - Crée une nouvelle partie
  * PUT /api/games/:code - Met à jour l'état d'une partie
  */
-export default function handler(req, res) {
+export default async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,19 +42,20 @@ export default function handler(req, res) {
             const newCode = generateGameCode();
             const game = {
                 code: newCode,
-                createdAt: Date.now(),
-                host: req.body.host || 'Présentateur',
-                players: [req.body.host || 'Présentateur'],
+                host: req.body?.host || 'Présentateur',
+                players: [req.body?.host || 'Présentateur'],
                 state: 'lobby',
-                roles: req.body.roles || [],
+                roles: req.body?.roles || [],
                 currentPhase: 'day',
                 nightActions: [],
                 votes: {},
                 eliminated: [],
-                messages: []
+                messages: [],
+                settings: req.body?.settings || {}
             };
             
-            games.set(newCode, game);
+            // Créer dans MongoDB
+            await createGame(game);
             
             return res.status(201).json({
                 success: true,
@@ -66,8 +65,8 @@ export default function handler(req, res) {
         }
 
         if (req.method === 'GET' && code) {
-            // Récupérer l'état d'une partie
-            const game = games.get(code);
+            // Récupérer l'état d'une partie depuis MongoDB
+            const game = await getGame(code);
             
             if (!game) {
                 return res.status(404).json({
@@ -84,7 +83,7 @@ export default function handler(req, res) {
 
         if (req.method === 'PUT' && code) {
             // Mettre à jour l'état d'une partie
-            const game = games.get(code);
+            const game = await getGame(code);
             
             if (!game) {
                 return res.status(404).json({
@@ -93,13 +92,15 @@ export default function handler(req, res) {
                 });
             }
 
-            // Fusionner les changements
-            Object.assign(game, req.body);
-            games.set(code, game);
+            // Mettre à jour dans MongoDB
+            await updateGame(code, req.body);
+            
+            // Récupérer la version mise à jour
+            const updatedGame = await getGame(code);
 
             return res.status(200).json({
                 success: true,
-                game: game
+                game: updatedGame
             });
         }
 
@@ -109,7 +110,7 @@ export default function handler(req, res) {
         });
 
     } catch (error) {
-        console.error('Erreur API:', error);
+        console.error('❌ Erreur API:', error);
         return res.status(500).json({
             success: false,
             error: 'Erreur serveur',

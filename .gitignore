@@ -3,6 +3,11 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
+# Fichiers d'environnement
+.env.local
+.env
+.env.*.local
+
 # Certificats SSL (générer avec npm run cert)
 cert/
 !cert/.gitkeep

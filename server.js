@@ -4,6 +4,7 @@
  * Gestion des parties, WebSocket, et API REST
  */
 
+import dotenv from 'dotenv';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
@@ -11,6 +12,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import url from 'url';
+
+// Charger les variables d'environnement
+dotenv.config({ path: '.env.local' });
 
 // Configuration des répertoires
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +24,8 @@ const __dirname = path.dirname(__filename);
 // CONFIGURATION DU SERVEUR
 // ================================================================
 
-const HTTP_PORT = 3000;
-const HTTPS_PORT = 8000;
+const HTTP_PORT = process.env.PORT || 3000;
+const HTTPS_PORT = process.env.HTTPS_PORT || 8000;
 
 // Gestion des parties
 const games = new Map();
