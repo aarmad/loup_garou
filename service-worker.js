@@ -3,7 +3,7 @@
  * Permet le fonctionnement hors-ligne et la mise en cache
  */
 
-const CACHE_NAME = 'loup-garou-v1';
+const CACHE_NAME = 'loup-garou-v2';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -11,7 +11,7 @@ const urlsToCache = [
     '/js/app.js',
     '/js/roles.js',
     '/js/gameLogic.js',
-    '/js/bluetooth.js',
+    '/js/network.js',
     '/manifest.json'
 ];
 
@@ -57,13 +57,8 @@ self.addEventListener('activate', (event) => {
  * Interception des requêtes (Stratégie Cache First)
  */
 self.addEventListener('fetch', (event) => {
-    // Ignorer les requêtes non-GET
-    if (event.request.method !== 'GET') {
-        return;
-    }
-
-    // Ignorer les requêtes issues des extensions (chrome-extension://)
-    if (event.request.url.startsWith('chrome-extension://')) {
+    // Ignorer les requêtes non-GET et les requêtes vers l'API
+    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
         return;
     }
 
