@@ -57,45 +57,30 @@ self.addEventListener('activate', (event) => {
  * Interception des requêtes (Stratégie Cache First)
  */
 self.addEventListener('fetch', (event) => {
-    // Ignorer les requêtes non-GET et les requêtes vers l'API
+    // Ne pas gérer les requêtes non-GET ou les requêtes vers l'API
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
         return;
     }
 
+    // Stratégie: Network First pour les assets critiques, Cache First pour les autres
+    // On simplifie: essayer réseau, si échec (offline), essayer cache
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then((response) => {
-                // Retourner la version en cache si disponible
-                if (response) {
-                    return response;
-                }
+                // Ne pas cacher si pas ok
+                if (!response || response.status !== 200) return response;
 
-                // Sinon, faire une requête réseau
-                return fetch(event.request
-                ).then((response) => {
-                    // Ne pas cacher les réponses non-réussies
-                    if (!response || response.status !== 200) {
-                        return response;
-                    }
-
-                    // Cacher la version en réseau
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME)
-                        .then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                }).catch((err) => {
-                    console.error('Erreur fetch:', err);
-                    // Retourner une page hors-ligne si nécessaire
-                    return new Response('Application hors-ligne', {
-                        status: 503,
-                        statusText: 'Service Unavailable',
-                        headers: new Headers({
-                            'Content-Type': 'text/plain'
-                        })
-                    });
+                // Cacher pour plus tard
+                const resClone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+                return response;
+            })
+            .catch(() => {
+                // Échec réseau (hors ligne), tenter le cache
+                return caches.match(event.request).then(cached => {
+                    if (cached) return cached;
+                    // Fallback ultime
+                    return new Response('Absent du cache et hors-ligne', { status: 404 });
                 });
             })
     );

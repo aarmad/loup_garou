@@ -17,7 +17,7 @@ class NetworkManager {
         this.listeners = [];
         this.gameState = null;
         this.pollInterval = null;
-        this.POLL_INTERVAL = 800;
+        this.POLL_INTERVAL = 2000;
     }
 
     async createGame(playerName) {
