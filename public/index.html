@@ -214,13 +214,15 @@
 
         <div class="app-content">
             <!-- Attente -->
-            <div id="waitingPanel" class="panel">
+            <div id="waitingPanel" class="panel active">
                 <div class="waiting-message">
-                    <svg class="spinner" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="24" cy="24" r="20" stroke="#6366f1" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="0" opacity="0.25"/>
-                        <circle cx="24" cy="24" r="20" stroke="#6366f1" stroke-width="2" stroke-dasharray="31.4" stroke-linecap="round"/>
-                    </svg>
-                    <p>En attente du démarrage...</p>
+                    <div class="waiting-spinner-container">
+                        <div class="waiting-orbit"></div>
+                        <div class="waiting-star"></div>
+                        <div class="waiting-moon"></div>
+                    </div>
+                    <p id="waitingMessageText">En attente du démarrage...</p>
+                    <div class="waiting-details">Le village s'endort... Préparez-vous pour une nuit riche en mystères.</div>
                 </div>
             </div>
 

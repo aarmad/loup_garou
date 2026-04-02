@@ -808,15 +808,13 @@ function showPlayerScreen() {
 }
 
 /**
- * Afficher le panneau d'attente
+ * Afficher l'écran d'attente
  */
-function showWaitingPanel() {
+function showWaitingPanel(text = "En attente du démarrage...") {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('waitingPanel').classList.add('active');
-    document.getElementById('rolePanel').classList.remove('active');
-    document.getElementById('nightActionPanel').classList.remove('active');
-    document.getElementById('votingPanel').classList.remove('active');
-    document.getElementById('resultPanel').classList.remove('active');
-    document.getElementById('eliminatedPanel').classList.remove('active');
+    const msgBox = document.getElementById('waitingMessageText');
+    if (msgBox) msgBox.textContent = text;
 }
 
 /**
