@@ -104,7 +104,6 @@ function attachEventListeners() {
 
     // Joueur
     document.getElementById('disconnectBtn').addEventListener('click', disconnect);
-    document.getElementById('confirmRoleBtn').addEventListener('click', confirmRole);
     document.getElementById('dismissMessageBtn').addEventListener('click', dismissMessage);
 }
 
