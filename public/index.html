@@ -136,26 +136,10 @@
 
             <!-- Section Jeu -->
             <div id="gameSection" class="section hidden">
-                <div class="game-status">
-                    <div class="status-card">
-                        <div class="status-label">Phase</div>
-                        <div id="currentPhase" class="status-value">—</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-label">Jour</div>
-                        <div id="dayCount" class="status-value">1</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-label">Joueurs</div>
-                        <div id="playerCountStatus" class="status-value">0</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-label">Timer</div>
-                        <div id="phaseTimer" class="status-value">00:00</div>
-                    </div>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2>Répartition terminée ✓</h2>
+                    <p style="color: var(--text-secondary); margin-top: 5px;">Les rôles ont bien été assignés aux joueurs. Chacun peut le consulter sur son smartphone.</p>
                 </div>
-
-                <!-- Les phases de jeu (nuit, jour, vote) ont été supprimées selon la requête "juste la répartition des cartes" -->
 
                 <!-- Joueurs -->
                 <div id="playersPanel" class="section">
@@ -208,7 +192,6 @@
                     <p id="roleDescription" class="role-description"></p>
                 </div>
                 <div id="roleInstructions" class="role-instructions"></div>
-                <button id="confirmRoleBtn" class="btn btn-primary">J'ai lu et compris ✓</button>
             </div>
 
             <!-- Messages -->
