@@ -276,6 +276,9 @@ async function joinGame() {
         const result = await AppState.networkManager.joinGame(gameCode, playerName);
         AppState.myId = result.playerId;
 
+        // Démarrer le polling pour recevoir les mises à jour
+        AppState.networkManager.startPolling();
+
         // Mise à jour du compteur et du numéro de salle
         updateRoomNumberDisplay(gameCode);
         updateConnectedPlayers(AppState.networkManager.getGameState());
@@ -284,9 +287,9 @@ async function joinGame() {
         document.getElementById('playerNameDisplay').textContent = playerName;
         document.getElementById('playerRoomNumber').textContent = gameCode;
         showPlayerScreen();
-        showWaitingPanel();
+        showWaitingPanel('En attente du démarrage...');
 
-        setDebugInfo(`Connecté à la salle: ${gameCode}. Joueurs: ${AppState.networkManager.getGameState()?.players?.length || 0}`);
+        setDebugInfo(`Connecté à la salle: ${gameCode}`);
     } catch (err) {
         showMessage('Impossible de se connecter: ' + err.message);
         setDebugInfo(`Connexion échouée pour le code ${gameCode}: ${err.message}`);
@@ -521,6 +524,13 @@ function startGame() {
     AppState.gameStarted = true;
     const localState = AppState.gameController.getGameState();
 
+    // Enrichir nightActions avec le nom du joueur (pour la synchro multi-appareils)
+    // Le playerId dans nightActions est un index local, on le convertit en nom
+    const enrichedNightActions = (localState.nightActions || []).map(action => ({
+        ...action,
+        playerName: playerNames[action.playerId] || null
+    }));
+
     // Mettre à jour l'état sur le serveur
     AppState.networkManager.updateGameState({
         state: 'playing',
@@ -530,7 +540,7 @@ function startGame() {
         players: updatedPlayers,
         votes: {},
         roleActions: {},
-        nightActions: localState.nightActions, // On partage la liste des actions
+        nightActions: enrichedNightActions,
         currentNightActionIndex: 0
     });
 
@@ -823,45 +833,51 @@ function showWaitingPanel(text = "En attente du démarrage...") {
 function syncGameState(gameState) {
     if (!gameState) return;
 
-    const myPlayer = gameState.players ? gameState.players.find(p => p.playerId === AppState.myId) : null;
-    
-    // Gérer l'élimination
-    if (myPlayer && !myPlayer.alive) {
+    // Trouver notre joueur par ID d'abord, puis par nom en fallback
+    const myPlayer = gameState.players
+        ? (gameState.players.find(p => p.playerId === AppState.myId)
+           || gameState.players.find(p => p.name === AppState.myName && !p.isPresenter))
+        : null;
+
+    // Mettre à jour AppState.myId si on l'a trouvé par nom (récupération d'ID)
+    if (myPlayer && myPlayer.playerId && myPlayer.playerId !== AppState.myId) {
+        AppState.myId = myPlayer.playerId;
+    }
+
+    // Normaliser le champ alive (la DB utilise parfois isAlive, parfois alive)
+    const isAlive = myPlayer ? (myPlayer.alive !== undefined ? myPlayer.alive : myPlayer.isAlive !== false) : true;
+
+    // Gérer l'élimination (seulement si la partie a démarré)
+    if (myPlayer && gameState.state === 'playing' && !isAlive) {
         showEliminatedScreen();
         return;
     }
 
-    // Vérifier si le jeu a démarré
+    // Le jeu a démarré
     if (gameState.state === 'playing' && gameState.players) {
-        // Initialiser l'état local si ce n'est pas fait
+        // Initialiser l'état local si ce n'est pas encore fait
         if (!AppState.gameStarted) {
             AppState.gameStarted = true;
-            
-            // Initialiser le GameController local pour les listes de joueurs
             const playerNames = gameState.players.filter(p => !p.isPresenter).map(p => p.name);
-            AppState.gameController.startNewGame(playerNames, gameState.roles || AppState.selectedRoles);
-            
-            // Synchroniser les statuts de vie
-            gameState.players.forEach(p => {
-                if (p.isPresenter) return;
-                const localPlayer = AppState.gameController.players.find(lp => lp.name === p.name);
-                if (localPlayer) localPlayer.alive = p.alive;
-            });
+            // On passe un tableau vide pour les rôles car on les a déjà dans gameState.players
+            AppState.gameController.startNewGame(playerNames, []);
         }
 
-        // Si on connaît notre rôle mais qu'on ne l'a pas encore affiché
+        // Afficher la carte de rôle si on vient de la recevoir (une seule fois)
         if (myPlayer && myPlayer.role && !AppState.myRole) {
             showPlayerRole(myPlayer);
-            return; // On arrête là pour laisser l'écran de rôle visible
+            return; // Laisser l'écran de rôle visible, l'utilisateur cliquera "Continuer"
         }
     }
 
-    // Si on est encore dans le panneau de rôle ou d'attente initiale, ne pas synchroniser les phases tout de suite
-    if (document.getElementById('rolePanel').classList.contains('active')) {
+    // Ne pas changer de panel si l'écran de rôle est actif (attendre que le joueur confirme)
+    if (document.getElementById('rolePanel') && document.getElementById('rolePanel').classList.contains('active')) {
         return;
     }
 
     // Synchroniser les phases
+    if (gameState.state !== 'playing') return;
+
     if (gameState.currentPhase === 'day') {
         showDayPhasePlayer(gameState);
     } else if (gameState.currentPhase === 'night') {
@@ -870,6 +886,7 @@ function syncGameState(gameState) {
         showVotingPhasePlayer(gameState);
     }
 }
+
 
 /**
  * Afficher l'écran d'élimination
@@ -914,7 +931,7 @@ function showPlayerRole(player) {
  * Afficher le panneau du rôle
  */
 function showRolePanel() {
-    document.getElementById('waitingPanel').classList.remove('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('rolePanel').classList.add('active');
 }
 
@@ -936,8 +953,14 @@ function showDayPhasePlayer(gameState) {
  * Afficher phase nuit (joueur)
  */
 function showNightPhasePlayer(gameState) {
-    const myPlayer = gameState.players.find(p => p.playerId === AppState.myId);
-    if (!myPlayer || !myPlayer.alive) {
+    // Trouver notre joueur (par ID puis par nom en fallback)
+    const myPlayer = gameState.players
+        ? (gameState.players.find(p => p.playerId === AppState.myId)
+           || gameState.players.find(p => p.name === AppState.myName && !p.isPresenter))
+        : null;
+
+    const isAlive = myPlayer ? (myPlayer.alive !== undefined ? myPlayer.alive : myPlayer.isAlive !== false) : true;
+    if (!isAlive) {
         showEliminatedScreen();
         return;
     }
@@ -948,22 +971,37 @@ function showNightPhasePlayer(gameState) {
         return;
     }
 
+    const myRole = ROLES[AppState.myRole];
+
+    // Si ce rôle n'a pas d'action nocturne, attendre en silence
+    if (!myRole || !myRole.hasNightAction) {
+        showWaitingPanel("C'est la nuit... Chut !");
+        return;
+    }
+
+    // Trouver le joueur actif par nom (plus fiable que l'index local)
     const currentActionIndex = gameState.currentNightActionIndex || 0;
     const currentAction = gameState.nightActions ? gameState.nightActions[currentActionIndex] : null;
-    
-    // Comparaison avec les noms car les IDs peuvent différer entre local et network
-    if (currentAction && currentAction.playerId !== undefined) {
-        // Trouvez le joueur correspondant à l'index de l'action dans le tableau original (GameState local du presenter)
-        // Mais ici on utilise le format du network
-        const actingPlayerOnNetwork = gameState.players.filter(p => !p.isPresenter)[currentAction.playerId];
-        
-        if (actingPlayerOnNetwork && actingPlayerOnNetwork.playerId === AppState.myId) {
+
+    if (currentAction && currentAction.playerName) {
+        // nightActions contient playerName (nom du joueur)
+        if (currentAction.playerName === AppState.myName) {
             showNightActionPrompt();
         } else {
-            showWaitingPanel("C'est la nuit... Chut!");
+            showWaitingPanel("C'est la nuit... Chut !");
+        }
+    } else if (currentAction && currentAction.playerId !== undefined) {
+        // Fallback: playerId dans nightActions est un index local
+        const nonPresenters = gameState.players.filter(p => !p.isPresenter);
+        const actingPlayer = nonPresenters[currentAction.playerId];
+        if (actingPlayer && (actingPlayer.playerId === AppState.myId || actingPlayer.name === AppState.myName)) {
+            showNightActionPrompt();
+        } else {
+            showWaitingPanel("C'est la nuit... Chut !");
         }
     } else {
-        showWaitingPanel("C'est la nuit... Chut!");
+        // Pas d'info de tour : si j'ai un rôle nocturne, afficher l'action
+        showNightActionPrompt();
     }
 }
 
