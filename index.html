@@ -227,7 +227,7 @@
             </div>
 
             <!-- Info Rôle -->
-            <div id="rolePanel" class="panel hidden">
+            <div id="rolePanel" class="panel">
                 <div class="role-display">
                     <div id="roleImage" class="role-image">
                         <img src="" alt="Rôle" id="roleImg">
@@ -236,27 +236,27 @@
                     <p id="roleDescription" class="role-description"></p>
                 </div>
                 <div id="roleInstructions" class="role-instructions"></div>
-                <button id="confirmRoleBtn" class="btn btn-primary">J'ai lu et compris</button>
+                <button id="confirmRoleBtn" class="btn btn-primary">J'ai lu et compris ✓</button>
             </div>
 
             <!-- Action Nocturne -->
-            <div id="nightActionPanel" class="panel hidden">
-                <h3>Action Nocturne</h3>
+            <div id="nightActionPanel" class="panel">
+                <h3>🌙 Action Nocturne</h3>
                 <p id="actionPrompt" class="action-prompt"></p>
                 <div id="actionTargets" class="targets-list"></div>
-                <button id="skipActionBtn" class="btn btn-secondary">Passer</button>
+                <button id="skipActionBtn" class="btn btn-secondary">Passer mon tour</button>
             </div>
 
             <!-- Vote -->
-            <div id="votingPanel" class="panel hidden">
-                <h3>Vote pour l'Élimination</h3>
+            <div id="votingPanel" class="panel">
+                <h3>⚖️ Vote pour l'Élimination</h3>
                 <p class="voting-prompt">Qui voulez-vous éliminer ?</p>
                 <div id="votingTargets" class="targets-list"></div>
                 <button id="abstainBtn" class="btn btn-secondary">M'abstenir</button>
             </div>
 
             <!-- Résultat -->
-            <div id="resultPanel" class="panel hidden">
+            <div id="resultPanel" class="panel">
                 <div class="result-message">
                     <div id="resultStatus" class="result-status">—</div>
                     <p id="resultText"></p>
@@ -265,13 +265,9 @@
             </div>
 
             <!-- Éliminé -->
-            <div id="eliminatedPanel" class="panel hidden">
+            <div id="eliminatedPanel" class="panel">
                 <div class="eliminated-message">
-                    <svg class="message-icon" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M32 8C18.7 8 8 18.7 8 32s10.7 24 24 24 24-10.7 24-24S45.3 8 32 8zm0 44c-11 0-20-9-20-20s9-20 20-20 20 9 20 20-9 20-20 20z" fill="#ef4444"/>
-                        <line x1="24" y1="24" x2="40" y2="40" stroke="#ef4444" stroke-width="2"/>
-                        <line x1="40" y1="24" x2="24" y2="40" stroke="#ef4444" stroke-width="2"/>
-                    </svg>
+                    <div class="message-icon">💀</div>
                     <h3>Vous avez été éliminé</h3>
                     <p>Vous pouvez suivre le jeu mais ne pouvez plus voter.</p>
                 </div>
@@ -279,28 +275,15 @@
             </div>
 
             <!-- Messages -->
-            <div id="messagePanel" class="panel hidden">
+            <div id="messagePanel" class="panel">
                 <div class="message-box">
                     <p id="messageText"></p>
                 </div>
                 <button id="dismissMessageBtn" class="btn btn-secondary">Fermer</button>
             </div>
 
-            <!-- État du Jeu -->
-            <div class="game-state-info">
-                <div class="state-row">
-                    <span>Statut:</span>
-                    <span id="playerGameStatus">—</span>
-                </div>
-                <div class="state-row">
-                    <span>Jour:</span>
-                    <span id="playerDayCount">—</span>
-                </div>
-                <div class="state-row">
-                    <span>Vos actions:</span>
-                    <span id="playerActions">—</span>
-                </div>
-            </div>
+            <!-- Debug bar (visible pour diagnostics) -->
+            <div id="debugBar" style="font-size:10px;color:#999;padding:8px;border-top:1px solid #eee;margin-top:8px;word-break:break-all;"></div>
         </div>
 
         <div class="player-footer">

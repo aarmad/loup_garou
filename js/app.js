@@ -833,22 +833,32 @@ function showWaitingPanel(text = "En attente du démarrage...") {
 function syncGameState(gameState) {
     if (!gameState) return;
 
+    // --- DEBUG BAR ---
+    const debugBar = document.getElementById('debugBar');
+    const debugInfo = `ID:${AppState.myId?.slice(-6)||'?'} | Nom:${AppState.myName||'?'} | État:${gameState.state||'?'} | Phase:${gameState.currentPhase||'?'} | Joueurs:${gameState.players?.length||0}`;
+    if (debugBar) debugBar.textContent = debugInfo;
+    console.log('[SYNC]', debugInfo);
+
     // Trouver notre joueur par ID d'abord, puis par nom en fallback
     const myPlayer = gameState.players
         ? (gameState.players.find(p => p.playerId === AppState.myId)
            || gameState.players.find(p => p.name === AppState.myName && !p.isPresenter))
         : null;
 
-    // Mettre à jour AppState.myId si on l'a trouvé par nom (récupération d'ID)
+    console.log('[SYNC] myPlayer:', myPlayer ? `${myPlayer.name} role=${myPlayer.role} alive=${myPlayer.alive}` : 'NON TROUVÉ');
+
+    // Mettre à jour AppState.myId si on l'a trouvé par nom
     if (myPlayer && myPlayer.playerId && myPlayer.playerId !== AppState.myId) {
+        console.log('[SYNC] Mise à jour myId:', myPlayer.playerId);
         AppState.myId = myPlayer.playerId;
     }
 
-    // Normaliser le champ alive (la DB utilise parfois isAlive, parfois alive)
+    // Normaliser le champ alive
     const isAlive = myPlayer ? (myPlayer.alive !== undefined ? myPlayer.alive : myPlayer.isAlive !== false) : true;
 
     // Gérer l'élimination (seulement si la partie a démarré)
     if (myPlayer && gameState.state === 'playing' && !isAlive) {
+        console.log('[SYNC] Éliminé !');
         showEliminatedScreen();
         return;
     }
@@ -859,25 +869,29 @@ function syncGameState(gameState) {
         if (!AppState.gameStarted) {
             AppState.gameStarted = true;
             const playerNames = gameState.players.filter(p => !p.isPresenter).map(p => p.name);
-            // On passe un tableau vide pour les rôles car on les a déjà dans gameState.players
             AppState.gameController.startNewGame(playerNames, []);
+            console.log('[SYNC] GameController initialisé avec', playerNames);
         }
 
         // Afficher la carte de rôle si on vient de la recevoir (une seule fois)
         if (myPlayer && myPlayer.role && !AppState.myRole) {
+            console.log('[SYNC] Affichage du rôle:', myPlayer.role);
             showPlayerRole(myPlayer);
-            return; // Laisser l'écran de rôle visible, l'utilisateur cliquera "Continuer"
+            return;
         }
     }
 
-    // Ne pas changer de panel si l'écran de rôle est actif (attendre que le joueur confirme)
-    if (document.getElementById('rolePanel') && document.getElementById('rolePanel').classList.contains('active')) {
+    // Ne pas changer de panel si l'écran de rôle est actif
+    const rolePanelActive = document.getElementById('rolePanel')?.classList.contains('active');
+    if (rolePanelActive) {
+        console.log('[SYNC] RolePanel actif, passage ignoré');
         return;
     }
 
     // Synchroniser les phases
     if (gameState.state !== 'playing') return;
 
+    console.log('[SYNC] Transition vers phase:', gameState.currentPhase);
     if (gameState.currentPhase === 'day') {
         showDayPhasePlayer(gameState);
     } else if (gameState.currentPhase === 'night') {
