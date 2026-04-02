@@ -1,7 +1,7 @@
 {
   "name": "Loup-Garou Mobile",
   "short_name": "Loup-Garou",
-  "description": "Jeu de Loup-Garou en présentiel avec synchronisation Bluetooth",
+  "description": "Jeu de Loup-Garou en présentiel avec synchronisation WiFi",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
