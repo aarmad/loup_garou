@@ -831,11 +831,34 @@ function syncGameState(gameState) {
         return;
     }
 
-    // Vérifier si le jeu a démarré et si on connaît notre rôle
+    // Vérifier si le jeu a démarré
     if (gameState.state === 'playing' && gameState.players) {
+        // Initialiser l'état local si ce n'est pas fait
+        if (!AppState.gameStarted) {
+            AppState.gameStarted = true;
+            
+            // Initialiser le GameController local pour les listes de joueurs
+            const playerNames = gameState.players.filter(p => !p.isPresenter).map(p => p.name);
+            AppState.gameController.startNewGame(playerNames, gameState.roles || AppState.selectedRoles);
+            
+            // Synchroniser les statuts de vie
+            gameState.players.forEach(p => {
+                if (p.isPresenter) return;
+                const localPlayer = AppState.gameController.players.find(lp => lp.name === p.name);
+                if (localPlayer) localPlayer.alive = p.alive;
+            });
+        }
+
+        // Si on connaît notre rôle mais qu'on ne l'a pas encore affiché
         if (myPlayer && myPlayer.role && !AppState.myRole) {
             showPlayerRole(myPlayer);
+            return; // On arrête là pour laisser l'écran de rôle visible
         }
+    }
+
+    // Si on est encore dans le panneau de rôle ou d'attente initiale, ne pas synchroniser les phases tout de suite
+    if (document.getElementById('rolePanel').classList.contains('active')) {
+        return;
     }
 
     // Synchroniser les phases
@@ -951,26 +974,25 @@ function showNightActionPrompt() {
     const role = ROLES[AppState.myRole];
     if (!role) return;
 
-    const alivePlayers = AppState.gameController.getAlivePlayers();
+    // Utiliser les joueurs du gameState network
+    const networkGameState = AppState.networkManager.getGameState();
+    const alivePlayers = networkGameState.players.filter(p => !p.isPresenter && p.alive);
     
-    document.getElementById('actionPrompt').textContent = `Choisissez une cible pour: ${role.nightActionType}`;
+    document.getElementById('actionPrompt').textContent = `Action : ${role.name}`;
 
     const targetsList = document.getElementById('actionTargets');
     targetsList.innerHTML = '';
 
     alivePlayers.forEach(player => {
-        if (player.id === AppState.myId) return; // Ne pas se cibler soi-même
-        
         const btn = document.createElement('button');
         btn.className = 'target-button';
         btn.innerHTML = `<span>${player.name}</span>`;
-        btn.addEventListener('click', () => selectNightTarget(player.id, btn));
+        btn.addEventListener('click', () => selectNightTarget(player.playerId, btn));
         targetsList.appendChild(btn);
     });
 
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('nightActionPanel').classList.add('active');
-    document.getElementById('rolePanel').classList.remove('active');
-    document.getElementById('waitingPanel').classList.remove('active');
 }
 
 let selectedNightTarget = null;
@@ -1030,22 +1052,24 @@ function showVotingPhasePlayer(gameState) {
  * Afficher l'invite de vote (joueur)
  */
 function showVotingPrompt() {
-    const alivePlayers = AppState.gameController.getAlivePlayers();
+    const networkGameState = AppState.networkManager.getGameState();
+    const alivePlayers = networkGameState.players.filter(p => !p.isPresenter && p.alive);
 
     const targetsList = document.getElementById('votingTargets');
     targetsList.innerHTML = '';
 
     alivePlayers.forEach(player => {
-        if (player.id === AppState.myId) return; // Ne pas voter pour soi-même
+        // Souvent au loup-garou on peut voter pour soi, mais ici on suit la règle indexée
+        if (player.playerId === AppState.myId) return;
         
         const btn = document.createElement('button');
         btn.className = 'target-button';
         btn.innerHTML = `<span>${player.name}</span>`;
-        btn.addEventListener('click', () => selectVoteTarget(player.id, btn));
+        btn.addEventListener('click', () => selectVoteTarget(player.playerId, btn));
         targetsList.appendChild(btn);
     });
 
-    document.getElementById('waitingPanel').classList.remove('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('votingPanel').classList.add('active');
 }
 
