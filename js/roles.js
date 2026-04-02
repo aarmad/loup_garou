@@ -1,11 +1,26 @@
 /**
  * LOUP-GAROU - DÉFINITION DES RÔLES
  * Rôles provenant de: https://loupgarou.fandom.com/fr/wiki/Liste_des_r%C3%B4les#Nouvelle_Lune
- * Villageois pur EXCLUS selon les spécifications
  */
 
 const ROLES = {
     // ---------- RÔLES VILLAGEOISES ----------
+    villageois: {
+        name: 'Simple Villageois',
+        emoji: '🧑',
+        image: 'https://static.wikia.nocookie.net/loupgaroumal/images/6/67/Simple_Villaegois.webp/revision/latest/scale-to-width-down/180?cb=20250907102312&path-prefix=fr',
+        team: 'village',
+        description: 'N\'a aucun pouvoir particulier.',
+        instructions: [
+            'Vous êtes un Simple Villageois.',
+            'Vous n\'avez pas de pouvoir spécial la nuit.',
+            'Votre seule arme est votre vote et votre intuition le jour.',
+            'Débusquez les loups par la discussion!'
+        ],
+        hasNightAction: false,
+        winCondition: 'wolves'
+    },
+
     voyante: {
         name: 'Voyante',
         emoji: '🔮',
@@ -397,9 +412,9 @@ const ROLES = {
  * Basée sur les règles officielles
  */
 const ROLE_DISTRIBUTIONS = {
-    3: ['loupgarou', 'loupgarou', 'voyante'],
-    4: ['loupgarou', 'loupgarou', 'voyante', 'salvateur'],
-    5: ['loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
+    3: ['loupgarou', 'voyante', 'villageois'],
+    4: ['loupgarou', 'voyante', 'villageois', 'villageois'],
+    5: ['loupgarou', 'voyante', 'salvateur', 'villageois', 'villageois'],
     6: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere'],
     7: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon'],
     8: ['loupgarou', 'loupgarou', 'loupgarou', 'voyante', 'salvateur', 'sorciere', 'cupidon', 'renard'],

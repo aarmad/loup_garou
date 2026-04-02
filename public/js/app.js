@@ -505,12 +505,13 @@ function startGame() {
         return;
     }
 
-    // Mélanger les rôles
-    const shuffledRoles = getRolesForGame(playerNames.length);
+    // Mélanger les rôles réellement sélectionnés par le présentateur
+    const shuffledRoles = shuffleRoles([...AppState.selectedRoles]);
     
     // Assigner les rôles aux joueurs dans le réseau
     const updatedPlayers = gameState.players.map(p => {
         if (p.isPresenter) return p;
+        // On prend un rôle au hasard dans la liste mélangée
         const role = shuffledRoles.pop();
         return { ...p, role, alive: true };
     });
