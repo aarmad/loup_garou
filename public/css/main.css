@@ -1008,3 +1008,16 @@ body {
     50% { transform: translateY(-10px) rotate(2deg); }
     100% { transform: translateY(0) rotate(0deg); }
 }
+
+@media (min-width: 768px) {
+    .app-content {
+        max-width: 600px !important;
+        margin: 20px auto !important;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+}
+
+
+
+

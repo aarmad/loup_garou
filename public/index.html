@@ -155,35 +155,7 @@
                     </div>
                 </div>
 
-                <!-- Nuit -->
-                <div id="nightPanel" class="phase-panel hidden">
-                    <h3>Phase de Nuit</h3>
-                    <div id="nightActionsList" class="actions-list"></div>
-                    <div class="night-controls">
-                        <button id="previousActionBtn" class="btn btn-secondary" disabled>← Précédent</button>
-                        <button id="nextActionBtn" class="btn btn-primary">Suivant →</button>
-                        <button id="skipPhaseBtn" class="btn btn-warning">Passer l'étape</button>
-                    </div>
-                </div>
-
-                <!-- Jour -->
-                <div id="dayPanel" class="phase-panel hidden">
-                    <h3>Phase de Jour</h3>
-                    <div class="day-info">
-                        <p>Les joueurs discutent et votent pour éliminer quelqu'un...</p>
-                    </div>
-                    <button id="startVotingBtn" class="btn btn-primary">Lancer le Vote</button>
-                </div>
-
-                <!-- Votes -->
-                <div id="votingPanel" class="phase-panel hidden">
-                    <h3>Résultats des Votes</h3>
-                    <div id="votesDisplay" class="votes-display"></div>
-                    <div class="voting-controls">
-                        <button id="confirmVoteBtn" class="btn btn-primary">Valider l'Élimination</button>
-                        <button id="retryVoteBtn" class="btn btn-secondary">Nouveau Vote</button>
-                    </div>
-                </div>
+                <!-- Les phases de jeu (nuit, jour, vote) ont été supprimées selon la requête "juste la répartition des cartes" -->
 
                 <!-- Joueurs -->
                 <div id="playersPanel" class="section">
@@ -213,31 +185,16 @@
         </div>
 
         <div class="app-content">
-            <!-- Attente (Role caché) -->
+            <!-- Attente -->
             <div id="waitingPanel" class="panel active">
                 <div class="waiting-message">
-                    <div class="waiting-card-container" style="
-                        width: 120px;
-                        height: 170px;
-                        background: linear-gradient(135deg, #1e1b4b, #312e81);
-                        border: 2px solid rgba(255,255,255,0.2);
-                        border-radius: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                        animation: floatCard 3s ease-in-out infinite;
-                        margin-bottom: 20px;
-                    ">
-                        <span style="
-                            font-size: 64px;
-                            color: rgba(255,255,255,0.8);
-                            font-weight: bold;
-                            text-shadow: 0 0 20px rgba(255,255,255,0.5);
-                        ">?</span>
+                    <div class="waiting-spinner-container">
+                        <div class="waiting-orbit"></div>
+                        <div class="waiting-star"></div>
+                        <div class="waiting-moon"></div>
                     </div>
                     <p id="waitingMessageText">En attente du démarrage...</p>
-                    <div class="waiting-details">Votre rôle vous sera assigné quand la partie commencera.</div>
+                    <div class="waiting-details">Le village s'endort... Préparez-vous pour une nuit riche en mystères.</div>
                 </div>
             </div>
 
@@ -252,53 +209,6 @@
                 </div>
                 <div id="roleInstructions" class="role-instructions"></div>
                 <button id="confirmRoleBtn" class="btn btn-primary">J'ai lu et compris ✓</button>
-            </div>
-
-            <!-- Action Nocturne -->
-            <div id="nightActionPanel" class="panel">
-                <h3 style="display: flex; align-items: center; justify-content: center;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                    Action Nocturne
-                </h3>
-                <p id="actionPrompt" class="action-prompt"></p>
-                <div id="actionTargets" class="targets-list"></div>
-                <button id="skipActionBtn" class="btn btn-secondary">Passer mon tour</button>
-            </div>
-
-            <!-- Vote -->
-            <div id="votingPanel" class="panel">
-                <h3 style="display: flex; align-items: center; justify-content: center;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 3v18"></path><rect x="3" y="11" width="18" height="6" rx="1"></rect><ellipse cx="12" cy="7" rx="3" ry="4"></ellipse><path d="M3 11l4-4a2 2 0 012.83 0L12 9l2.17-2.17a2 2 0 012.83 0l4 4"></path></svg>
-                    Vote pour l'Élimination
-                </h3>
-                <p class="voting-prompt">Qui voulez-vous éliminer ?</p>
-                <div id="votingTargets" class="targets-list"></div>
-                <button id="abstainBtn" class="btn btn-secondary">M'abstenir</button>
-            </div>
-
-            <!-- Résultat -->
-            <div id="resultPanel" class="panel">
-                <div class="result-message">
-                    <div id="resultStatus" class="result-status">—</div>
-                    <p id="resultText"></p>
-                </div>
-                <button id="continueBtn" class="btn btn-primary">Continuer</button>
-            </div>
-
-            <!-- Éliminé -->
-            <div id="eliminatedPanel" class="panel">
-                <div class="eliminated-message">
-                    <div class="message-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="display: block; margin: 0 auto 10px;">
-                            <path d="M9 12h.01"/><path d="M15 12h.01"/>
-                            <path d="M12 21a9 9 0 009-9C21 8.5 17 4 12 4s-9 4.5-9 8a9 9 0 009 9z"/>
-                            <path d="M8 21v-3"/><path d="M16 21v-3"/><path d="M12 21v-3"/>
-                        </svg>
-                    </div>
-                    <h3>Vous avez été éliminé</h3>
-                    <p>Vous pouvez suivre le jeu mais ne pouvez plus voter.</p>
-                </div>
-                <div id="spectatorInfo" class="spectator-info"></div>
             </div>
 
             <!-- Messages -->

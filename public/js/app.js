@@ -101,19 +101,10 @@ function attachEventListeners() {
     document.getElementById('incPlayersBtn').addEventListener('click', increasePlayerCount);
     document.getElementById('decPlayersBtn').addEventListener('click', decreasePlayerCount);
     document.getElementById('startGameBtn').addEventListener('click', startGame);
-    document.getElementById('previousActionBtn').addEventListener('click', previousNightAction);
-    document.getElementById('nextActionBtn').addEventListener('click', nextNightAction);
-    document.getElementById('startVotingBtn').addEventListener('click', startVoting);
-    document.getElementById('confirmVoteBtn').addEventListener('click', confirmVote);
-    document.getElementById('retryVoteBtn').addEventListener('click', retryVote);
-    document.getElementById('skipPhaseBtn').addEventListener('click', skipPhase);
 
     // Joueur
     document.getElementById('disconnectBtn').addEventListener('click', disconnect);
     document.getElementById('confirmRoleBtn').addEventListener('click', confirmRole);
-    document.getElementById('skipActionBtn').addEventListener('click', skipNightAction);
-    document.getElementById('abstainBtn').addEventListener('click', abstainVote);
-    document.getElementById('continueBtn').addEventListener('click', continueGame);
     document.getElementById('dismissMessageBtn').addEventListener('click', dismissMessage);
 }
 
@@ -520,37 +511,21 @@ function startGame() {
         return { ...p, role, alive: true };
     });
 
-    // Initialiser le contrôleur de jeu local pour générer les actions nocturnes
-    AppState.gameController.startNewGame(playerNames, AppState.selectedRoles);
     AppState.gameStarted = true;
-    const localState = AppState.gameController.getGameState();
-
-    // Enrichir nightActions avec le nom du joueur (pour la synchro multi-appareils)
-    // Le playerId dans nightActions est un index local, on le convertit en nom
-    const enrichedNightActions = (localState.nightActions || []).map(action => ({
-        ...action,
-        playerName: playerNames[action.playerId] || null
-    }));
 
     // Mettre à jour l'état sur le serveur
     AppState.networkManager.updateGameState({
         state: 'playing',
-        currentPhase: 'night',
-        dayCount: 1,
-        nightCount: 1,
-        players: updatedPlayers,
-        votes: {},
-        roleActions: {},
-        nightActions: enrichedNightActions,
-        currentNightActionIndex: 0
+        currentPhase: 'role_reveal', /* Phase statique de distribution */
+        players: updatedPlayers
     });
 
     // Masquer la section config, afficher la section jeu
     document.getElementById('configSection').classList.add('hidden');
     document.getElementById('gameSection').classList.remove('hidden');
 
-    // Commencer par la nuit
-    showNightPhase();
+    // Mettre à jour la liste des joueurs
+    updatePlayersList();
 }
 
 /**
@@ -632,18 +607,9 @@ function updateNightActionsList() {
  */
 function syncPresenterState(gameState) {
     if (gameState.state !== 'playing') return;
-
-    if (gameState.currentPhase === 'voting') {
-        if (gameState.votes) {
-            // Transférer les votes réseau dans le controller local
-            Object.keys(gameState.votes).forEach(pid => {
-                AppState.gameController.recordVote(pid, gameState.votes[pid]);
-            });
-            showVoteResults();
-        }
-    } else if (gameState.currentPhase === 'night') {
-        updateNightActionsList();
-    }
+    
+    // On met juste à jour la liste si on est en jeu
+    updatePlayersList();
 }
 
 /**
@@ -715,10 +681,15 @@ function showDayPhase() {
 function updatePlayersList() {
     const list = document.getElementById('playersList');
     list.innerHTML = '';
+    
+    // Récupérer les données depuis le réseau
+    const gameState = AppState.networkManager.getGameState();
+    if (!gameState || !gameState.players) return;
+    
+    const players = gameState.players.filter(p => !p.isPresenter);
 
-    AppState.gameController.getPlayers().forEach(player => {
-        const role = ROLES[player.role];
-        const status = player.alive ? 'Vivant' : 'Éliminé';
+    players.forEach(player => {
+        const role = ROLES[player.role] || { name: 'Inconnu', emoji: '❓' };
 
         const item = document.createElement('div');
         item.className = 'player-item';
@@ -735,9 +706,7 @@ function updatePlayersList() {
                     <div class="player-role">${role.name}</div>
                 </div>
             </div>
-            <div class="player-status ${player.alive ? 'alive' : 'dead'}">
-                ${status}
-            </div>
+            <div class="player-status alive">Distribué</div>
         `;
 
         list.appendChild(item);
@@ -910,39 +879,16 @@ function syncGameState(gameState) {
 
     // Le jeu a démarré
     if (gameState.state === 'playing' && gameState.players) {
-        // Initialiser l'état local si ce n'est pas encore fait
         if (!AppState.gameStarted) {
             AppState.gameStarted = true;
-            const playerNames = gameState.players.filter(p => !p.isPresenter).map(p => p.name);
-            AppState.gameController.startNewGame(playerNames, []);
-            console.log('[SYNC] GameController initialisé avec', playerNames);
+            console.log('[SYNC] Jeu démarré');
         }
 
-        // Afficher la carte de rôle si on vient de la recevoir (une seule fois)
-        if (myPlayer && myPlayer.role && !AppState.myRole) {
-            console.log('[SYNC] Affichage du rôle:', myPlayer.role);
+        // Afficher la carte de rôle
+        if (myPlayer && myPlayer.role) {
+            console.log('[SYNC] Affichage du rôle statique:', myPlayer.role);
             showPlayerRole(myPlayer);
-            return;
         }
-    }
-
-    // Ne pas changer de panel si l'écran de rôle est actif
-    const rolePanelActive = document.getElementById('rolePanel')?.classList.contains('active');
-    if (rolePanelActive) {
-        console.log('[SYNC] RolePanel actif, passage ignoré');
-        return;
-    }
-
-    // Synchroniser les phases
-    if (gameState.state !== 'playing') return;
-
-    console.log('[SYNC] Transition vers phase:', gameState.currentPhase);
-    if (gameState.currentPhase === 'day') {
-        showDayPhasePlayer(gameState);
-    } else if (gameState.currentPhase === 'night') {
-        showNightPhasePlayer(gameState);
-    } else if (gameState.currentPhase === 'voting') {
-        showVotingPhasePlayer(gameState);
     }
 }
 
