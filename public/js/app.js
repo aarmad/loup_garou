@@ -53,6 +53,7 @@ function initializeApp() {
             if (AppState.isPresenter) {
                 updateConnectedPlayers(gameState);
                 updateRolesList();
+                syncPresenterState(gameState);
             } else {
                 syncGameState(gameState);
                 updateConnectedPlayers(gameState);
@@ -605,14 +606,44 @@ function updateNightActionsList() {
         const role = ROLES[playerFromInternal.role];
         const item = document.createElement('div');
         item.className = 'action-item' + (isActive ? ' active' : '') + (isCompleted ? ' completed' : '');
+        
+        // Use an SVG instead of raw emoji
+        const checkSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: bottom;"><path d="M20 6L9 17l-5-5"></path></svg>`;
+        
+        let roleDisplay = role.emoji;
+        if (role.image) {
+            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 24px; height: 24px; object-fit: contain; margin-right: 8px; vertical-align: middle;" />`;
+        } else {
+            roleDisplay = `<span style="font-size: 20px; margin-right: 8px; vertical-align: middle;">${role.emoji}</span>`;
+        }
+
         item.innerHTML = `
-            <span class="action-icon">${role.emoji}</span>
-            <span>${playerFromInternal.name} (${role.name})</span>
-            ${isCompleted ? '<span style="margin-left: auto;">✓</span>' : ''}
+            ${roleDisplay}
+            <span style="vertical-align: middle;">${playerFromInternal.name} (${role.name})</span>
+            ${isCompleted ? '<span style="margin-left: auto; color: var(--success);">' + checkSvg + '</span>' : ''}
         `;
 
         list.appendChild(item);
     });
+}
+
+/**
+ * Synchroniser l'état du jeu pour le présentateur
+ */
+function syncPresenterState(gameState) {
+    if (gameState.state !== 'playing') return;
+
+    if (gameState.currentPhase === 'voting') {
+        if (gameState.votes) {
+            // Transférer les votes réseau dans le controller local
+            Object.keys(gameState.votes).forEach(pid => {
+                AppState.gameController.recordVote(pid, gameState.votes[pid]);
+            });
+            showVoteResults();
+        }
+    } else if (gameState.currentPhase === 'night') {
+        updateNightActionsList();
+    }
 }
 
 /**
@@ -723,9 +754,12 @@ function startVoting() {
     document.getElementById('dayPanel').classList.remove('active');
     document.getElementById('votingPanel').classList.add('active');
 
-    setTimeout(() => {
-        showVoteResults();
-    }, 5000);
+    // On efface les anciens votes dans le game controller local
+    AppState.gameController.gameState.votes = {};
+    
+    // Au lieu d'attendre 5 secondes bêtement, on affiche l'interface en temps réel.
+    // La liste se mettra à jour à chaque fois qu'un joueur vote via syncPresenterState()
+    showVoteResults();
 }
 
 /**
@@ -765,6 +799,17 @@ function confirmVote() {
 
     const playerId = results.eliminated;
     AppState.gameController.applyElimination(playerId);
+
+    const updatedNetworkPlayers = AppState.networkManager.getGameState().players.map(p => {
+        if (p.isPresenter) return p;
+        const localP = AppState.gameController.getPlayers().find(lp => lp.name === p.name);
+        return { ...p, alive: localP ? localP.alive : p.alive };
+    });
+
+    // Envoyer la mort sur le réseau
+    AppState.networkManager.updateGameState({
+        players: updatedNetworkPlayers
+    });
 
     // Vérifier les conditions de victoire
     const winCheck = AppState.gameController.checkWinConditions();
