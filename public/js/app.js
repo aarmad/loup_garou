@@ -121,6 +121,51 @@ function loadSavedSettings() {
     const saved = localStorage.getItem('playerName');
     if (saved) {
         document.getElementById('playerName').value = saved;
+        AppState.myName = saved;
+    }
+
+    // Auto-connexion si une partie est en cours
+    const savedGameId = localStorage.getItem('gameId');
+    const savedIsPresenter = localStorage.getItem('isPresenter') === 'true';
+    const savedPlayerId = localStorage.getItem('playerId');
+
+    if (savedGameId && savedPlayerId) {
+        console.log('Tentative de reconnexion...', { savedGameId, savedIsPresenter });
+        AppState.currentRoomNumber = savedGameId;
+        AppState.isPresenter = savedIsPresenter;
+        AppState.myId = savedPlayerId;
+
+        // Reconnecter le network manager
+        AppState.networkManager.gameId = savedGameId;
+        AppState.networkManager.playerId = savedPlayerId;
+        AppState.networkManager.isPresenter = savedIsPresenter;
+        AppState.networkManager.isConnected = true;
+        AppState.networkManager.startPolling();
+
+        // Récupérer l'état initial
+        AppState.networkManager.refreshGameState().then(gameState => {
+            if (!gameState) {
+                console.warn('Partie saved non trouvée sur le serveur');
+                return;
+            }
+
+            if (savedIsPresenter) {
+                showPresenterScreen();
+                updateRoomNumberDisplay(savedGameId);
+                updateConnectedPlayers(gameState);
+                
+                if (gameState.state === 'playing') {
+                    AppState.gameStarted = true;
+                    document.getElementById('configSection').classList.add('hidden');
+                    document.getElementById('gameSection').classList.remove('hidden');
+                    updatePlayersList();
+                }
+            } else {
+                showPlayerScreen();
+                updateRoomNumberDisplay(savedGameId);
+                syncGameState(gameState);
+            }
+        });
     }
 }
 
@@ -409,23 +454,14 @@ function updateRolesList() {
         
         let roleDisplay = `<span class="role-icon">${role.emoji}</span>`;
         if (role.image) {
-            roleDisplay = `<img src="${role.image}" alt="${role.name}" class="role-preview-img" style="width: 32px; height: 32px; object-fit: contain; cursor: zoom-in;" />`;
-        } else {
-            roleDisplay = `<span class="role-preview-img" style="cursor: zoom-in;">${role.emoji}</span>`;
+            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 32px; height: 32px; object-fit: contain;" />`;
         }
         
         toggle.innerHTML = `
             ${roleDisplay}
-            <div class="role-name-text" style="font-size: 10px; text-align: center; cursor: pointer;">${role.name}</div>
+            <div class="role-count" style="font-size: 10px; text-align: center;">${role.name}</div>
         `;
 
-        // Clic sur l'image = Preview
-        toggle.querySelector('.role-preview-img').addEventListener('click', (e) => {
-            e.stopPropagation();
-            showRolePreview(roleName);
-        });
-
-        // Clic sur le reste = Toggle selection
         toggle.addEventListener('click', () => toggleRole(roleName, toggle));
         container.appendChild(toggle);
     });
@@ -741,6 +777,8 @@ function updatePlayersList() {
 
         const item = document.createElement('div');
         item.className = 'player-item';
+        item.style.cursor = 'pointer'; // Indiquer qu'on peut cliquer
+        
         let roleEmoji = `<span style="font-size: 24px;">${role.emoji}</span>`;
         if (role.image) {
             roleEmoji = `<img src="${role.image}" alt="${role.name}" style="width: 32px; height: 32px; object-fit: contain;" />`;
@@ -756,6 +794,11 @@ function updatePlayersList() {
             </div>
             <div class="status-badge success" style="margin: 0; padding: 4px 10px; font-size: 10px;">Distribué</div>
         `;
+
+        // Action quand on clique sur un joueur (Meneur uniquement)
+        item.addEventListener('click', () => {
+            if (player.role) showRolePreview(player.role);
+        });
 
         list.appendChild(item);
     });
