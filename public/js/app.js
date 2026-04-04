@@ -405,16 +405,16 @@ function updateRolesList() {
         const isSelected = AppState.selectedRoles.includes(roleName);
 
         const toggle = document.createElement('div');
-        toggle.className = 'role-toggle' + (isSelected ? ' active' : '');
+        toggle.className = 'role-item' + (isSelected ? ' selected' : '');
         
-        let roleDisplay = role.emoji;
+        let roleDisplay = `<span class="role-icon">${role.emoji}</span>`;
         if (role.image) {
-            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 100%; height: 100%; object-fit: contain;" />`;
+            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 32px; height: 32px; object-fit: contain;" />`;
         }
         
         toggle.innerHTML = `
-            <div class="role-toggle-emoji">${roleDisplay}</div>
-            <div style="font-size: 11px; text-align: center;">${role.name}</div>
+            ${roleDisplay}
+            <div class="role-count" style="font-size: 10px; text-align: center;">${role.name}</div>
         `;
 
         toggle.addEventListener('click', () => toggleRole(roleName, toggle));
@@ -432,13 +432,13 @@ function toggleRole(roleName, element) {
     const index = AppState.selectedRoles.indexOf(roleName);
     if (index > -1) {
         AppState.selectedRoles.splice(index, 1);
-        element.classList.remove('active');
+        element.classList.remove('selected');
     } else {
         if (AppState.selectedRoles.length < AppState.selectedPlayerCount) {
             AppState.selectedRoles.push(roleName);
-            element.classList.add('active');
+            element.classList.add('selected');
         } else {
-            showMessage('Vous avez atteint le nombre maximum de rôles');
+            showMessage('Maximum de rôles atteint');
             return;
         }
     }
@@ -692,20 +692,20 @@ function updatePlayersList() {
 
         const item = document.createElement('div');
         item.className = 'player-item';
-        let roleEmoji = role.emoji;
+        let roleEmoji = `<span style="font-size: 24px;">${role.emoji}</span>`;
         if (role.image) {
-            roleEmoji = `<img src="${role.image}" alt="${role.name}" style="width: 24px; height: 24px; object-fit: contain;" />`;
+            roleEmoji = `<img src="${role.image}" alt="${role.name}" style="width: 32px; height: 32px; object-fit: contain;" />`;
         }
         
         item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <span style="font-size: 20px;">${roleEmoji}</span>
+            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                ${roleEmoji}
                 <div style="flex: 1;">
                     <div class="player-name">${player.name}</div>
                     <div class="player-role">${role.name}</div>
                 </div>
             </div>
-            <div class="player-status alive">Distribué</div>
+            <div class="status-badge success" style="margin: 0; padding: 4px 10px; font-size: 10px;">Distribué</div>
         `;
 
         list.appendChild(item);

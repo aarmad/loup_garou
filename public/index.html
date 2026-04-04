@@ -4,106 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Jeu de Loup-Garou en présentiel avec WiFi/Internet">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="#111111">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%236366f1'/%3E%3Ccircle cx='35' cy='35' r='8' fill='white'/%3E%3Ccircle cx='65' cy='35' r='8' fill='white'/%3E%3Cpath d='M 30 65 Q 50 75 70 65' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 25 45 Q 20 50 25 55' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 75 45 Q 80 50 75 55' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="css/modern.css">
-    <title>Loup-Garou - Jeu en Présentiel</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='black'/%3E%3Cpath d='M7 12l3 3 7-7' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/main.css">
+    <title>Loup-Garou - Neo-Brutalist</title>
 </head>
 <body>
     <!-- ÉCRAN LOBBY -->
     <div id="lobbyScreen" class="screen active">
-        <div class="lobby-container">
-            <div class="lobby-logo">
-                <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="40" fill="#6366f1"/>
-                    <ellipse cx="50" cy="40" rx="15" ry="18" fill="white"/>
-                    <circle cx="38" cy="35" r="4" fill="#1f2937"/>
-                    <circle cx="62" cy="35" r="4" fill="#1f2937"/>
-                    <path d="M 50 45 L 45 55 L 55 55 Z" fill="white"/>
-                    <path d="M 35 50 Q 30 55 35 60" stroke="white" stroke-width="2" fill="none"/>
-                    <path d="M 65 50 Q 70 55 65 60" stroke="white" stroke-width="2" fill="none"/>
+        <div class="lobby-container card">
+            <div class="lobby-logo" style="margin-bottom: 20px; animation: float 3s ease-in-out infinite;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2l2.4 7.4h7.6l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4-6.2-4.5h7.6z"/>
                 </svg>
             </div>
             
-            <h1 class="lobby-title">Loup-Garou</h1>
-            <p class="lobby-subtitle">Jeu en Présentiel</p>
+            <h1>Loup-Garou</h1>
+            <h3>Jeu en Présentiel</h3>
             
-            <div class="form-group">
+            <div class="form-group" style="width: 100%;">
                 <label for="playerName">Votre pseudo</label>
-                <input type="text" id="playerName" placeholder="Entrez votre nom..." maxlength="20">
+                <input type="text" id="playerName" placeholder="Votre nom..." maxlength="20" autocomplete="off">
             </div>
 
             <div id="bluetoothStatus" class="status-badge success">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2v20M7 7l10 10M7 17l10-10"/>
                 </svg>
-                <span id="networkStatusText">Connecté au serveur</span>
+                <span id="networkStatusText">Connecté</span>
             </div>
 
-            <div class="button-group">
+            <div class="button-group" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
                 <button id="createGameBtn" class="btn btn-primary" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <path d="M12 17v-2M12 8v-2M12 12h.01"/>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                     </svg>
                     Créer une Partie
                 </button>
                 <button id="joinGameBtn" class="btn btn-secondary" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
-                        <path d="M21 14h-5M21 10h-5"/>
                     </svg>
                     Rejoindre une Partie
                 </button>
             </div>
 
             <!-- Champ pour rejoindre une partie -->
-            <div id="joinGameForm" class="form-group hidden">
-                <label for="gameCode">Code de la salle (4 chiffres)</label>
+            <div id="joinGameForm" class="form-group hidden" style="width: 100%; margin-top: 20px;">
+                <label for="gameCode">Code de la salle</label>
                 <input type="text" id="gameCode" placeholder="Ex: 1234" maxlength="4" pattern="[0-9]{4}">
-                <div class="button-group">
-                    <button id="cancelJoinBtn" class="btn btn-secondary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
+                <div class="button-group" style="display: flex; gap: 12px; margin-top: 12px;">
+                    <button id="cancelJoinBtn" class="btn btn-secondary" style="flex: 1;">
                         Annuler
                     </button>
-                    <button id="confirmJoinBtn" class="btn btn-primary" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 13l4 4L19 7"/>
-                        </svg>
+                    <button id="confirmJoinBtn" class="btn btn-primary" style="flex: 1;" disabled>
                         Confirmer
                     </button>
                 </div>
             </div>
 
-            <div id="debugInfo" class="debug-info"></div>
+            <div id="debugInfo" class="debug-info muted-text" style="margin-top: 20px;"></div>
         </div>
     </div>
 
     <!-- ÉCRAN PRÉSENTATEUR -->
     <div id="presenterScreen" class="screen">
-        <div class="app-header">
-            <div class="header-content">
-                <button id="backBtn" class="btn-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+        <div class="app-header card" style="margin-bottom: 24px; padding: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <button id="backBtn" class="btn btn-secondary" style="padding: 8px; border-radius: 50%; width: 40px; height: 40px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
                     </svg>
                 </button>
-                <h2>Présentateur</h2>
+                <h2 style="margin-bottom: 0;">Meneur</h2>
+                <div style="width: 40px;"></div>
             </div>
             <div class="room-badges">
                 <div class="room-badge">
                     <span class="room-label">Salle</span>
                     <span id="roomNumber" class="room-number">—</span>
                 </div>
-                <div class="room-badge players-badge">
+                <div class="room-badge">
                     <span class="room-label">Joueurs</span>
                     <span id="playerCountPresenter" class="player-count">0</span>
                 </div>
-                <div class="room-badge players-badge">
+                <div class="room-badge">
                     <span class="room-label">Connectés</span>
                     <span id="connectedPlayersCount" class="player-count">0</span>
                 </div>
@@ -112,38 +99,41 @@
 
         <div class="app-content">
             <!-- Section Configuration -->
-            <div id="configSection" class="section">
-                <h3>Configuration de la Partie</h3>
+            <div id="configSection" class="card">
+                <h3>Configuration</h3>
                 
                 <div class="form-group">
                     <label>Nombre de joueurs</label>
                     <div class="number-input">
                         <button id="decPlayersBtn">−</button>
-                        <span id="playerCountDisplay">0</span>
+                        <span id="playerCountDisplay" style="font-weight: 800; font-size: 18px;">0</span>
                         <button id="incPlayersBtn">+</button>
                     </div>
                 </div>
 
                 <div class="roles-config">
-                    <h4>Rôles disponibles</h4>
+                    <h4>Rôles</h4>
                     <div id="rolesList" class="roles-grid"></div>
                 </div>
 
-                <button id="startGameBtn" class="btn btn-primary" disabled>
+                <button id="startGameBtn" class="btn btn-primary" style="width: 100%;" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
                     Démarrer la Partie
                 </button>
             </div>
 
             <!-- Section Jeu -->
-            <div id="gameSection" class="section hidden">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2>Répartition terminée ✓</h2>
-                    <p style="color: var(--text-secondary); margin-top: 5px;">Les rôles ont bien été assignés aux joueurs. Chacun peut le consulter sur son smartphone.</p>
+            <div id="gameSection" class="hidden">
+                <div class="card" style="text-align: center;">
+                    <h2>Distribution ✓</h2>
+                    <p class="muted-text">Les cartes ont été distribuées. Chaque joueur peut consulter son rôle sur son téléphone.</p>
                 </div>
 
                 <!-- Joueurs -->
-                <div id="playersPanel" class="section">
-                    <h3>État des Joueurs</h3>
+                <div id="playersPanel" class="card">
+                    <h4>Liste des Rôles</h4>
                     <div id="playersList" class="players-list"></div>
                 </div>
             </div>
@@ -152,17 +142,15 @@
 
     <!-- ÉCRAN JOUEUR -->
     <div id="playerScreen" class="screen">
-        <div class="app-header">
-            <div class="header-content">
-                <h2 id="playerNameDisplay">Joueur</h2>
-            </div>
+        <div class="app-header card" style="margin-bottom: 24px; padding: 16px;">
+            <h2 id="playerNameDisplay" style="text-align: center; margin-bottom: 16px;">Pseudo</h2>
             <div class="room-badges">
                 <div class="room-badge">
                     <span class="room-label">Salle</span>
                     <span id="playerRoomNumber" class="room-number">—</span>
                 </div>
-                <div class="room-badge players-badge">
-                    <span class="room-label">Joueurs</span>
+                <div class="room-badge">
+                    <span class="room-label">Connectés</span>
                     <span id="playerCountPlayer" class="player-count">0</span>
                 </div>
             </div>
@@ -171,47 +159,48 @@
         <div class="app-content">
             <!-- Attente -->
             <div id="waitingPanel" class="panel active">
-                <div class="waiting-message">
-                    <div class="waiting-spinner-container">
-                        <div class="waiting-orbit"></div>
-                        <div class="waiting-star"></div>
-                        <div class="waiting-moon"></div>
+                <div class="waiting-message" style="text-align: center;">
+                    <div class="waiting-spinner-container" style="margin-bottom: 24px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: float 3s ease-in-out infinite;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
                     </div>
-                    <p id="waitingMessageText">En attente du démarrage...</p>
-                    <div class="waiting-details">Le village s'endort... Préparez-vous pour une nuit riche en mystères.</div>
+                    <p id="waitingMessageText" style="font-weight: 800; font-size: 18px;">En attente...</p>
+                    <p class="muted-text" style="margin-top: 8px;">Le meneur prépare la partie...</p>
                 </div>
             </div>
 
             <!-- Info Rôle -->
-            <div id="rolePanel" class="panel">
+            <div id="rolePanel" class="panel" style="display: none;">
                 <div class="role-display">
-                    <div id="roleImage" class="role-image">
+                    <div class="role-image">
                         <img src="" alt="Rôle" id="roleImg">
                     </div>
-                    <h2 id="roleName">Rôle</h2>
-                    <p id="roleDescription" class="role-description"></p>
+                    <h2 id="roleName">Votre Rôle</h2>
+                    <p id="roleDescription" class="muted-text"></p>
                 </div>
                 <div id="roleInstructions" class="role-instructions"></div>
             </div>
 
             <!-- Messages -->
-            <div id="messagePanel" class="panel">
+            <div id="messagePanel" class="panel" style="display: none;">
                 <div class="message-box">
-                    <p id="messageText"></p>
+                    <p id="messageText" style="font-weight: 700;"></p>
                 </div>
-                <button id="dismissMessageBtn" class="btn btn-secondary">Fermer</button>
+                <button id="dismissMessageBtn" class="btn btn-secondary" style="width: 100%; margin-top: 16px;">
+                    Fermer
+                </button>
             </div>
 
-            <!-- Debug bar (visible pour diagnostics) -->
-            <div id="debugBar" style="font-size:10px;color:#999;padding:8px;border-top:1px solid #eee;margin-top:8px;word-break:break-all;"></div>
+            <div id="debugBar" class="muted-text" style="padding: 8px; border-top: 2px solid var(--border-color); margin-top: 16px; word-break: break-all; opacity: 0.5;"></div>
         </div>
 
-        <div class="player-footer">
-            <button id="disconnectBtn" class="btn-icon-text">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 13l4-4m0 0l-4-4m4 4H9"/>
+        <div style="margin-top: auto; padding-top: 24px;">
+            <button id="disconnectBtn" class="btn btn-secondary" style="width: 100%;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
-                Quitter
+                Quitter la salle
             </button>
         </div>
     </div>
@@ -223,11 +212,8 @@
     <script src="js/app.js"></script>
 
     <script>
-        // Service Worker Registration
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js').catch(err => {
-                console.log('Service Worker registration failed:', err);
-            });
+            navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW failed', err));
         }
     </script>
 </body>
