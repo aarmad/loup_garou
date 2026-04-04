@@ -205,6 +205,17 @@
         </div>
     </div>
     
+    <div id="rolePreviewModal" class="panel" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 90%; max-width: 400px; margin: 0; box-shadow: 10px 10px 0px #111;">
+        <div style="text-align: center;">
+            <div style="background: var(--bg); border: 3px solid #111; border-radius: 12px; padding: 24px; margin-bottom: 16px;">
+                <img id="rolePreviewImg" src="" alt="Role" style="width: 150px; height: 150px; object-fit: contain; margin: 0 auto 12px;">
+                <h2 id="rolePreviewName" style="margin: 0;">Nom du Rôle</h2>
+            </div>
+            <p id="rolePreviewDesc" class="muted-text" style="font-size: 14px; margin-bottom: 24px; line-height: 1.4;"></p>
+            <button onclick="hideRolePreview()" class="btn btn-primary" style="width: 100%;">Fermer</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/roles.js"></script>
     <script src="js/gameLogic.js"></script>

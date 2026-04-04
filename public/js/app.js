@@ -303,7 +303,7 @@ function showPresenterScreen() {
  * Augmenter le nombre de joueurs
  */
 function increasePlayerCount() {
-    if (AppState.selectedPlayerCount < 15) {
+    if (AppState.selectedPlayerCount < 22) {
         AppState.selectedPlayerCount++;
         updatePlayerCountDisplay();
     }
@@ -409,14 +409,23 @@ function updateRolesList() {
         
         let roleDisplay = `<span class="role-icon">${role.emoji}</span>`;
         if (role.image) {
-            roleDisplay = `<img src="${role.image}" alt="${role.name}" style="width: 32px; height: 32px; object-fit: contain;" />`;
+            roleDisplay = `<img src="${role.image}" alt="${role.name}" class="role-preview-img" style="width: 32px; height: 32px; object-fit: contain; cursor: zoom-in;" />`;
+        } else {
+            roleDisplay = `<span class="role-preview-img" style="cursor: zoom-in;">${role.emoji}</span>`;
         }
         
         toggle.innerHTML = `
             ${roleDisplay}
-            <div class="role-count" style="font-size: 10px; text-align: center;">${role.name}</div>
+            <div class="role-name-text" style="font-size: 10px; text-align: center; cursor: pointer;">${role.name}</div>
         `;
 
+        // Clic sur l'image = Preview
+        toggle.querySelector('.role-preview-img').addEventListener('click', (e) => {
+            e.stopPropagation();
+            showRolePreview(roleName);
+        });
+
+        // Clic sur le reste = Toggle selection
         toggle.addEventListener('click', () => toggleRole(roleName, toggle));
         container.appendChild(toggle);
     });
@@ -447,6 +456,42 @@ function toggleRole(roleName, element) {
 }
 
 /**
+ * Afficher un rôle en grand pour le présentateur
+ */
+function showRolePreview(roleName) {
+    const role = ROLES[roleName];
+    if (!role) return;
+
+    const modal = document.getElementById('rolePreviewModal');
+    const img = document.getElementById('rolePreviewImg');
+    const name = document.getElementById('rolePreviewName');
+    const desc = document.getElementById('rolePreviewDesc');
+
+    if (role.image) {
+        img.src = role.image;
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+    
+    name.textContent = role.name;
+    desc.textContent = role.description;
+    
+    modal.classList.add('active');
+}
+
+/**
+ * Fermer le preview du rôle
+ */
+function hideRolePreview() {
+    document.getElementById('rolePreviewModal').classList.remove('active');
+}
+
+// Rendre disponible globalement si nécessaire
+window.showRolePreview = showRolePreview;
+window.hideRolePreview = hideRolePreview;
+
+/**
  * Mettre à jour l'état du bouton "Démarrer"
  */
 function updateStartButton() {
@@ -470,19 +515,23 @@ function updateStartButton() {
  * Mettre à jour les joueurs connectés
  */
 function updateConnectedPlayers(gameState) {
-    if (!gameState) return;
+    if (!gameState || !gameState.players) return;
     
-    AppState.connectedPlayers = gameState.players.filter(p => !p.isPresenter) || [];
+    // Filtrer pour ne compter que les joueurs (exclure le meneur)
+    const playersOnly = gameState.players.filter(p => !p.isPresenter);
+    const count = playersOnly.length;
+    
+    AppState.connectedPlayers = playersOnly;
+    
     const playerCountPresenter = document.getElementById('playerCountPresenter');
     const playerCountStatus = document.getElementById('playerCountStatus');
     const connectedCountElement = document.getElementById('connectedPlayersCount');
     const playerCountPlayer = document.getElementById('playerCountPlayer');
     
-    const totalPlayers = gameState.players.length;
-    if (playerCountPresenter) playerCountPresenter.textContent = totalPlayers;
-    if (playerCountStatus) playerCountStatus.textContent = totalPlayers;
-    if (connectedCountElement) connectedCountElement.textContent = totalPlayers;
-    if (playerCountPlayer) playerCountPlayer.textContent = totalPlayers;
+    if (playerCountPresenter) playerCountPresenter.textContent = count;
+    if (playerCountStatus) playerCountStatus.textContent = count;
+    if (connectedCountElement) connectedCountElement.textContent = count;
+    if (playerCountPlayer) playerCountPlayer.textContent = count;
     
     updateStartButton();
 }
