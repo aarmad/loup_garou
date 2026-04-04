@@ -104,6 +104,11 @@ class NetworkManager {
         }
 
         if (!this.gameState.players.find(p => p.playerId === this.playerId)) {
+            // Empêcher de rejoindre si la partie a déjà commencé
+            if (this.gameState.state === 'playing') {
+                throw new Error('La partie a déjà commencé. Impossible de rejoindre.');
+            }
+
             this.gameState.players.push({
                 playerId: this.playerId,
                 name: playerName,
