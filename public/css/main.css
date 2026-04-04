@@ -77,8 +77,8 @@ body {
   display: none;
   flex-direction: column;
   width: 100%;
-  max-width: 500px; /* Constrained phone-like look for desktop */
-  margin: auto;
+  max-width: 1400px;
+  margin: 0 auto;
   animation: slideIn 0.3s var(--transition);
 }
 
@@ -97,6 +97,14 @@ body {
   box-shadow: var(--shadow);
   margin-bottom: 24px;
   padding: 24px;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
 }
 
 /* Typography */
